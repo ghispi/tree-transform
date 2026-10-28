@@ -113,4 +113,21 @@ final class NestedArraySourceTest extends TestCase
         $this->expectException(LogicException::class);
         $tree->count();
     }
+
+    public function testIteratorChildrenAreFollowedByTheirParentsSiblings(): void
+    {
+        $tree = [
+            ['id' => 'a', 'children' => new \ArrayIterator([['id' => 'b', 'children' => new \ArrayIterator([['id' => 'c']])], ['id' => 'd']])],
+            ['id' => 'e'],
+        ];
+
+        self::assertSame('a[b[c], d], e', Trees::compactOf(new NestedArraySource($tree)));
+    }
+
+    public function testChildrenWithKeysAreWalkedInOrder(): void
+    {
+        $tree = [['id' => 'a', 'children' => ['x' => ['id' => 'b'], 'y' => ['id' => 'c']]], ['id' => 'd']];
+
+        self::assertSame('a[b, c], d', Trees::compactOf(new NestedArraySource($tree)));
+    }
 }

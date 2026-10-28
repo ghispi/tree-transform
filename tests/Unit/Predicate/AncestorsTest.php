@@ -119,4 +119,12 @@ final class AncestorsTest extends TestCase
 
         self::assertSame(['A', 'F', 'G', 'H', 'I'], array_map(Field::id(...), iterator_to_array($tree->iterate(), false)));
     }
+
+    public function testCountIsNeverNegative(): void
+    {
+        $ancestors = new Ancestors();
+        $ancestors->enter('A', -1);
+
+        self::assertCount(0, $ancestors);
+    }
 }

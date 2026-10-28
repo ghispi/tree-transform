@@ -23,6 +23,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- `NestedSetSource` rejects a child whose right value equals its parent's (e.g. `1..4` containing `2..4`): a
+  child's interval must lie strictly inside its parent's.
 - `AdjacencyListSource` with `OrphanPolicy::Drop`: the cycle error no longer counts and names dropped orphans as
   cycle members.
 

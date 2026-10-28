@@ -64,6 +64,8 @@ final class DepthListSourceTest extends TestCase
             'string depth' => [[['0', self::n('a')]], "depth '0' cannot follow"],
             'not a pair' => [[self::n('a')], 'entries must be [depth, node] pairs'],
             'scalar entry' => [['x'], 'entries must be [depth, node] pairs'],
+            'only a depth' => [[[0]], 'entries must be [depth, node] pairs'],
+            'only a node' => [[[1 => self::n('a')]], 'entries must be [depth, node] pairs'],
         ];
     }
 

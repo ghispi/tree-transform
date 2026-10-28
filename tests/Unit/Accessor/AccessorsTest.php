@@ -107,4 +107,19 @@ final class AccessorsTest extends TestCase
     {
         self::assertNull(new PrivatePropertyAccessor(PrivateNode::class)->reader('lft')(new PrivateNode(1)));
     }
+
+    public function testGetterNamesAreBuiltWithAnUppercasedField(): void
+    {
+        $node = new class {
+            /**
+             * @param list<mixed> $arguments
+             */
+            public function __call(string $name, array $arguments): mixed
+            {
+                return $name === 'getTitle' ? 'called' : null;
+            }
+        };
+
+        self::assertSame('called', new GetterAccessor()->reader('title')($node));
+    }
 }

@@ -10,7 +10,9 @@ use Ghispi\TreeTransform\Strategy\Annotate;
 use Ghispi\TreeTransform\Strategy\Annotated;
 use Ghispi\TreeTransform\Strategy\MatchState;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
+use Ghispi\TreeTransform\Tests\Fixtures\Outline;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
+use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
 use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -94,5 +96,19 @@ final class AnnotateTest extends TestCase
     public function testEmptyInput(): void
     {
         self::assertSame([], Tree::fromNestedSet([])->annotate(static fn(): bool => true)->toFlatList());
+    }
+
+    public function testSkippingTheCurrentNodeIsForwardedToTheInput(): void
+    {
+        $spy = SpyCursor::on(Outline::source('A[B[b1, b2]], C'));
+        $cursor = new Annotate()->apply($spy, new Callback(RunningExample::isId('B')));
+        while ($cursor->next()) {
+            if (Field::id($cursor->node()) === 'B') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame(['B'], $spy->skipped);
+        self::assertSame(['A', 'B', 'C'], $spy->visited);
     }
 }

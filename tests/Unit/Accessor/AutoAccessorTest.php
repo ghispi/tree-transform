@@ -206,4 +206,18 @@ final class AutoAccessorTest extends TestCase
         self::assertSame([0, 1], array_keys(iterator_to_array(Tree::fromNestedSet($rows)->iterate(), false)));
         self::assertSame(2, Tree::fromNestedSet($rows)->count());
     }
+
+    public function testPublicPropertyIsPreferredOverAGetterOfTheSameField(): void
+    {
+        $node = new class {
+            public string $name = 'property';
+
+            public function getName(): string
+            {
+                return 'getter';
+            }
+        };
+
+        self::assertSame('property', new AutoAccessor()->reader('name')($node));
+    }
 }

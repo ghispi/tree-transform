@@ -13,6 +13,7 @@ use Ghispi\TreeTransform\Source\NestedSetSource;
 use Ghispi\TreeTransform\Tests\Fixtures\CountingAccessor;
 use Ghispi\TreeTransform\Tests\Fixtures\Matrix;
 use Ghispi\TreeTransform\Tests\Fixtures\Model\PrivateNode;
+use Ghispi\TreeTransform\Tests\Fixtures\Model\PublicNode;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
 use Ghispi\TreeTransform\Tree;
@@ -104,6 +105,7 @@ final class NestedSetSourceTest extends TestCase
             'unordered left values' => [[self::n('a', 1, 6), self::n('c', 4, 5), self::n('b', 2, 3)], 'does not increase'],
             'duplicate left value' => [[self::n('a', 1, 6), self::n('b', 2, 3), self::n('c', 2, 5)], 'does not increase'],
             'overlapping intervals' => [[self::n('a', 1, 5), self::n('b', 2, 7)], 'overlaps its parent interval ending at 5'],
+            'child sharing its parent\'s right value' => [[self::n('a', 1, 4), self::n('b', 2, 4)], 'interval 2..4 overlaps its parent interval ending at 4'],
             'non-numeric left' => [[self::n('a', 'x', 2)], 'Field "lft" must be an integer'],
             'missing right' => [[['id' => 'a', 'lft' => 1]], 'Field "rgt" must be an integer, got null'],
             'float left' => [[['id' => 'a', 'lft' => 1.0, 'rgt' => 2]], 'got float'],
@@ -191,5 +193,71 @@ final class NestedSetSourceTest extends TestCase
 
         self::assertFalse($cursor->next());
         self::assertNull($cursor->node());
+    }
+
+    public function testRowsWithoutARootValueShareOneTree(): void
+    {
+        $rows = [self::n('a', 1, 4, null), self::n('b', 2, 3, null)];
+
+        self::assertSame('a[b]', self::read($rows, NestedSetFields::gedmo()));
+    }
+
+    public function testRootsMayBeObjectsIdentifiedByInstance(): void
+    {
+        $first = new \stdClass();
+        $second = new \stdClass();
+        $rows = [self::n('a', 1, 4, $first), self::n('b', 2, 3, $first), self::n('c', 1, 4, $second), self::n('d', 2, 3, $second)];
+
+        self::assertSame('a[b], c[d]', self::read($rows, NestedSetFields::gedmo()));
+    }
+
+    public function testRootsMayBeStringableObjectsIdentifiedByTheirString(): void
+    {
+        $root = static fn(string $value): \Stringable => new class ($value) implements \Stringable {
+            public function __construct(private readonly string $value) {}
+
+            public function __toString(): string
+            {
+                return $this->value;
+            }
+        };
+        $rows = [self::n('a', 1, 4, $root('r1')), self::n('b', 2, 3, $root('r1')), self::n('c', 1, 4, $root('r2'))];
+
+        self::assertSame('a[b], c', self::read($rows, NestedSetFields::gedmo()));
+    }
+
+    public function testAnObjectRootIsNotTheSameTreeAsAnIntegerEqualToItsInstanceId(): void
+    {
+        $object = new \stdClass();
+        $rows = [self::n('a', 1, 4, $object), self::n('b', 1, 4, spl_object_id($object))];
+
+        self::assertSame('a, b', self::read($rows, NestedSetFields::gedmo()));
+    }
+
+    public function testObjectRowsAreReadWithTheDefaultAccessor(): void
+    {
+        $rows = [new PublicNode('a', lft: 1, rgt: 4), new PublicNode('b', lft: 2, rgt: 3), new PublicNode('c', lft: 5, rgt: 6)];
+
+        self::assertSame('a[b], c', Trees::compactOf(new NestedSetSource($rows)));
+    }
+
+    public function testChildSharingTheRightBoundaryOfItsParentIsOverlapping(): void
+    {
+        $this->expectException(InvalidTreeException::class);
+        $this->expectExceptionMessage('overlaps its parent interval ending at 4');
+
+        self::read([self::n('a', 1, 4), self::n('b', 4, 5)]);
+    }
+
+    public function testRowStartingAtTheRightBoundaryOfASkippedNodeIsStillValidated(): void
+    {
+        $cursor = new NestedSetSource([self::n('a', 1, 4), self::n('b', 2, 3), self::n('c', 4, 5)])->open();
+        $cursor->next();
+        $cursor->skipSubtree();
+
+        $this->expectException(InvalidTreeException::class);
+        $this->expectExceptionMessage('overlaps its parent interval ending at 4');
+
+        $cursor->next();
     }
 }

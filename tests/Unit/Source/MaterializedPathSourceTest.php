@@ -187,4 +187,34 @@ final class MaterializedPathSourceTest extends TestCase
         $this->expectException(LogicException::class);
         $tree->count();
     }
+
+    public function testGapsAreRejectedByDefault(): void
+    {
+        $this->expectException(InvalidTreeException::class);
+        $this->expectExceptionMessage('its parent path is missing or comes later');
+
+        self::read(['1,', '1,2,3,']);
+    }
+
+    public function testRootsAtDifferentLevelsAreRejectedByDefault(): void
+    {
+        $this->expectException(InvalidTreeException::class);
+        $this->expectExceptionMessage('rows are not in tree order');
+
+        self::read(['1,', '2,3,']);
+    }
+
+    public function testTheLeadingSeparatorIsOptionalPerRow(): void
+    {
+        $fields = new MaterializedPathFields('path', '/');
+
+        self::assertSame('1[2, 3]', self::read(['/1', '1/2', '/1/3/'], $fields));
+    }
+
+    public function testGapsAreRejectedByTheDefaultConstructor(): void
+    {
+        $this->expectException(InvalidTreeException::class);
+
+        Trees::pairs(new MaterializedPathSource([['path' => '1,'], ['path' => '1,2,3,']]));
+    }
 }

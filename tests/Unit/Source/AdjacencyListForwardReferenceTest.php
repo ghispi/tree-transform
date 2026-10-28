@@ -224,4 +224,11 @@ final class AdjacencyListForwardReferenceTest extends TestCase
 
         return $out;
     }
+
+    public function testDroppedOrphansDoNotHideRootsOrEachOtherWithForwardReferences(): void
+    {
+        $rows = [self::n('b', 'a'), self::n('a'), self::n('s'), self::n('o', 'm1'), self::n('p', 'o'), self::n('q', 'm2'), self::n('r', 'q')];
+
+        self::assertSame('a[b], s', self::read($rows, OrphanPolicy::Drop));
+    }
 }

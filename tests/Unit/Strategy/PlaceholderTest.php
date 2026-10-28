@@ -10,6 +10,7 @@ use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\OnMatch;
 use Ghispi\TreeTransform\Strategy\Placeholder;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
+use Ghispi\TreeTransform\Tests\Fixtures\Outline;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
@@ -106,5 +107,25 @@ final class PlaceholderTest extends TestCase
 
         self::assertSame('A, [1 hidden]', Trees::compact($seen));
         self::assertSame(['A', 'H'], $spy->skipped);
+    }
+
+    public function testAPlaceholderIsProducedAsSoonAsItsRunIsClosed(): void
+    {
+        // Y is removed under X; the placeholder for it is due when W (X's sibling) is read, before W is evaluated.
+        $log = [];
+        $predicate = static function (mixed $n) use (&$log): bool {
+            $log[] = 'test ' . Field::id($n);
+
+            return \in_array(Field::id($n), ['A', 'X'], true);
+        };
+        $factory = static function (int $hidden, int $depth) use (&$log): array {
+            $log[] = "placeholder at {$depth}";
+
+            return ['id' => 'ph'];
+        };
+
+        Tree::from(Outline::source('A[X[Y], W]'))->filter($predicate, new Placeholder($factory))->count();
+
+        self::assertSame(['test A', 'test X', 'test Y', 'placeholder at 2', 'test W', 'placeholder at 1'], $log);
     }
 }

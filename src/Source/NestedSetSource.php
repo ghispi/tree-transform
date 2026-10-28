@@ -21,7 +21,7 @@ use Ghispi\TreeTransform\Internal\StreamSource;
  * skipSubtree() skips rows by comparing left values only.
  *
  * Checks performed while reading: integer left/right values, left < right, increasing left values within a tree,
- * and child intervals inside their parent's interval.
+ * and child intervals strictly inside their parent's interval.
  */
 final readonly class NestedSetSource implements Source, StreamSource
 {
@@ -131,7 +131,7 @@ final readonly class NestedSetSource implements Source, StreamSource
             while ($open > 0 && $rights[$open - 1] < $left) {
                 --$open;
             }
-            if ($open > 0 && $right > $rights[$open - 1]) {
+            if ($open > 0 && $right >= $rights[$open - 1]) {
                 throw InvalidTreeException::at(null, \sprintf(
                     'interval %d..%d overlaps its parent interval ending at %d.',
                     $left,

@@ -88,4 +88,11 @@ final class PreorderedAdjacencySourceTest extends TestCase
         $this->expectException(LogicException::class);
         $tree->count();
     }
+
+    public function testNumericStringIdsMatchTheirChildrensParents(): void
+    {
+        $rows = [self::n('1'), self::n('2', '1'), self::n('3', 2), self::n('4', '1')];
+
+        self::assertSame('1[2[3], 4]', Trees::compactOf(new PreorderedAdjacencySource($rows)));
+    }
 }

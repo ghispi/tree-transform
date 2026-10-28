@@ -10,7 +10,9 @@ use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
 use Ghispi\TreeTransform\Strategy\MinMatches;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
+use Ghispi\TreeTransform\Tests\Fixtures\Outline;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
+use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
 use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -76,5 +78,19 @@ final class MinMatchesTest extends TestCase
         }
 
         self::assertSame('A[B], H[I]', Trees::compact($seen));
+    }
+
+    public function testSkippingTheCurrentNodeIsForwardedToTheInput(): void
+    {
+        $spy = SpyCursor::on(Outline::source('A[B[b1, b2]], C'));
+        $cursor = new MinMatches(1)->apply($spy, new Callback(RunningExample::isId('B')));
+        while ($cursor->next()) {
+            if (Field::id($cursor->node()) === 'B') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame(['B'], $spy->skipped);
+        self::assertSame(['A', 'B', 'C'], $spy->visited);
     }
 }

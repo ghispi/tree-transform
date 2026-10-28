@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Unit\Source;
 
+use Ghispi\TreeTransform\Accessor\Accessor;
+use Ghispi\TreeTransform\Accessor\GetterAccessor;
 use Ghispi\TreeTransform\Exception\CycleDetectedException;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
@@ -226,5 +228,29 @@ final class AdjacencyListSourceTest extends TestCase
 
         $this->expectException(LogicException::class);
         $tree->count();
+    }
+
+    public function testCustomAccessorsAreUsedForArrayRows(): void
+    {
+        $accessor = new class implements Accessor {
+            public function reader(string $field): \Closure
+            {
+                return static fn(mixed $node): mixed => \is_array($node) ? ($node['x_' . $field] ?? null) : null;
+            }
+        };
+        $rows = [
+            ['id' => 'a', 'parent_id' => null, 'x_id' => 1, 'x_parent_id' => null],
+            ['id' => 'b', 'parent_id' => null, 'x_id' => 2, 'x_parent_id' => 1],
+            ['id' => 'c', 'parent_id' => null, 'x_id' => 3, 'x_parent_id' => 2],
+        ];
+
+        self::assertSame('a[b[c]]', Trees::compactOf(new AdjacencyListSource($rows, accessor: $accessor)));
+    }
+
+    public function testCustomAccessorsAreUsedForObjectRows(): void
+    {
+        $rows = [new GetterNode(1), new GetterNode(2, 1), new GetterNode(3, 2)];
+
+        self::assertSame('1[2[3]]', Trees::compactOf(new AdjacencyListSource($rows, new AdjacencyListFields('id', 'parentId'), new GetterAccessor())));
     }
 }

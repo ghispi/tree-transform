@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Tests\Unit\Strategy;
 
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
+use Ghispi\TreeTransform\Predicate\Ancestors;
 use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\ActiveTrail;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
+use Ghispi\TreeTransform\Tests\Fixtures\Outline;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
@@ -138,5 +140,28 @@ final class ActiveTrailTest extends TestCase
 
         self::assertSame('A, H', Trees::compact($seen));
         self::assertSame([], $spy->skipped);
+    }
+
+    public function testPredicateCanReadAncestors(): void
+    {
+        $underD = static fn(mixed $n, int $depth, Ancestors $ancestors): bool => $ancestors->parent() !== null && Field::id($ancestors->parent()) === 'D';
+
+        self::assertSame('A[B[C, D[E]], F], H', Trees::compactOf(Tree::from(RunningExample::source())->activeTrail($underD)));
+    }
+
+    public function testSkippingAnEarlierBufferedSiblingKeepsTheActiveNodesChildren(): void
+    {
+        // X is flushed (queue position 0) when E is found, but E itself was buffered, not queued: skipping X must not
+        // be forwarded to the input as a skip of E's subtree.
+        $cursor = new ActiveTrail(multiple: false)->apply(Outline::source('A[X, B[E[e1, e2]]]')->open(), new Callback(RunningExample::isId('E')));
+        $seen = [];
+        while ($cursor->next()) {
+            $seen[] = [$cursor->depth(), $cursor->node()];
+            if (Field::id($cursor->node()) === 'X') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame('A[X, B[E[e1, e2]]]', Trees::compact($seen));
     }
 }

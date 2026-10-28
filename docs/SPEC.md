@@ -181,7 +181,7 @@ Details:
   present ancestor. With every path ending in the separator, byte-wise ordering always yields pre-order; the real
   risk is locale/ICU collations that ignore punctuation — the docs recommend binary collation (`COLLATE "C"`,
   `utf8mb4_bin`). Ordering violations below a root are detected.
-- **Validation** is always on and cheap: integer `lft`/`rgt`, `lft < rgt`, increasing `lft`, child intervals inside
+- **Validation** is always on and cheap: integer `lft`/`rgt`, `lft < rgt`, increasing `lft`, child intervals strictly inside
   the parent (rows of one root must be grouped together; that is not checked, to keep memory O(depth)); depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
   exceptions implementing `Ghispi\TreeTransform\Exception\TreeTransformException`.
 
