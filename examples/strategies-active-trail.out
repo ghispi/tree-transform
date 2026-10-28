@@ -1,0 +1,54 @@
+Defaults (a menu):
+A
+├─ B
+│  ├─ C
+│  └─ D
+│     └─ E
+└─ F
+H
+
+siblings: false (a breadcrumb):
+A
+└─ B
+   └─ D
+      └─ E
+
+Active = B, activeChildrenDepth: 1 (default):
+A
+├─ B
+│  ├─ C
+│  └─ D
+└─ F
+H
+
+Active = B, activeChildrenDepth: 0:
+A
+├─ B
+└─ F
+H
+
+Active = B, activeChildrenDepth: PHP_INT_MAX:
+A
+├─ B
+│  ├─ C
+│  └─ D
+│     └─ E
+└─ F
+H
+
+Active = C or I (multiple: true, default):
+A
+├─ B
+│  ├─ C
+│  └─ D
+└─ F
+H
+└─ I
+
+Active = C or I, multiple: false (first match wins):
+A
+├─ B
+│  ├─ C
+│  └─ D
+└─ F
+H

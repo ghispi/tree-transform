@@ -1,0 +1,13 @@
+<li class="open">Shop</li>
+  <li class="open">Clothing</li>
+    <li class="open">Men</li>
+      <li class="dimmed">Shirts</li>
+      <li class="hit">Shoes</li>
+    <li class="open">Women</li>
+      <li class="hit">Dresses</li>
+  <li class="open">Electronics</li>
+    <li class="hit">Phones</li>
+      <li class="hit">Cases</li>
+    <li class="dimmed">Laptops</li>
+  <li class="dimmed">Garden</li>
+    <li class="dimmed">Tools</li>

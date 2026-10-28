@@ -1,0 +1,11 @@
+Home
+└─ Blog
+   └─ Hello world
+
+count():  3 (= depth 3)
+parent(): Drafts
+at(0):    Home
+some():   true
+every():  false
+toArray() titles: Home > Blog > Drafts
+foreach:  0:Home 1:Blog 2:Drafts 

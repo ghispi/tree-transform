@@ -109,9 +109,10 @@ final class Ancestors implements \Countable, \IteratorAggregate
     }
 
     /**
-     * Records the node being tested; its ancestors are the nodes recorded at lower depths.
+     * Records the node about to be tested; its ancestors are the nodes recorded at lower depths.
      *
-     * @internal used by filter stages
+     * For strategy authors: call it with every node, right before the predicate, in pre-order. Predicates
+     * never call it.
      */
     public function enter(mixed $node, int $depth): void
     {

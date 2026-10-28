@@ -1,0 +1,10 @@
+Clothing
+├─ Men
+└─ Women
+Electronics
+└─ Phones
+   └─ Cases
+
+Only the Phones branch:
+Phones
+└─ Cases

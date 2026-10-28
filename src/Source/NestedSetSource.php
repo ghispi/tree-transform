@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Source;
 use Ghispi\TreeTransform\Accessor\Accessor;
 use Ghispi\TreeTransform\Accessor\AutoAccessor;
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Exception\LogicException;
 use Ghispi\TreeTransform\Internal\Rows;
 
 /**
@@ -33,9 +32,6 @@ final readonly class NestedSetSource implements Source
 
     public function open(): Cursor
     {
-        if ($this->rows instanceof \Generator && !self::fresh($this->rows)) {
-            throw new LogicException('This source reads a generator, which can only be traversed once.');
-        }
         $fields = $this->fields;
 
         return new NestedSetCursor(
@@ -47,17 +43,4 @@ final readonly class NestedSetSource implements Source
         );
     }
 
-    /**
-     * @param \Generator<mixed> $generator
-     */
-    private static function fresh(\Generator $generator): bool
-    {
-        try {
-            $generator->rewind();
-
-            return true;
-        } catch (\Exception) {
-            return false;
-        }
-    }
 }

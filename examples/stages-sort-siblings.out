@@ -1,0 +1,13 @@
+Shop
+├─ Clothing
+│  ├─ Men
+│  │  ├─ Shirts
+│  │  └─ Shoes
+│  └─ Women
+│     └─ Dresses
+├─ Electronics
+│  ├─ Laptops
+│  └─ Phones
+│     └─ Cases
+└─ Garden
+   └─ Tools

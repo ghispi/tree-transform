@@ -1,0 +1,23 @@
+[
+    {
+        "title": "Shop",
+        "children": [
+            {
+                "title": "Clothing",
+                "children": [
+                    {
+                        "title": "Men"
+                    }
+                ]
+            },
+            {
+                "title": "Electronics",
+                "children": [
+                    {
+                        "title": "Phones"
+                    }
+                ]
+            }
+        ]
+    }
+]

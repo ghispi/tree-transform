@@ -1,0 +1,15 @@
+<ul>
+  <li><a href="/">Home</a></li>
+  <li><a href="/products">Products</a>
+    <ul>
+      <li class="active"><a href="/products/laptops">Laptops</a>
+        <ul>
+          <li><a href="/products/laptops/ultrabooks">Ultrabooks</a></li>
+          <li><a href="/products/laptops/gaming">Gaming</a></li>
+        </ul>
+      </li>
+      <li><a href="/products/phones">Phones</a></li>
+    </ul>
+  </li>
+  <li><a href="/support">Support</a></li>
+</ul>

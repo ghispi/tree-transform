@@ -1,0 +1,12 @@
+Search "sh":
+[Shop]
+└─ Clothing
+   └─ Men
+      ├─ [Shirts]
+      └─ [Shoes]
+
+Search "phones", with the contents of matches:
+Shop
+└─ Electronics
+   └─ Phones
+      └─ Cases

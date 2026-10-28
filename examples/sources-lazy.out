@@ -1,0 +1,6 @@
+4 categories
+Ghispi\TreeTransform\Exception\LogicException: This source reads a generator, which can only be traversed once. Use Tree::lazy() or LazySource to read it again.
+
+4 categories
+1 root
+Queries run: 2

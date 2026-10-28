@@ -1,0 +1,7 @@
+1  Shop      lft  1  rgt  6  lvl 0
+2  Clothing  lft  2  rgt  3  lvl 1
+12 Garden    lft  4  rgt  5  lvl 1
+
+Clothing: 1..2
+Electronics: 1..2
+Garden: 1..2

@@ -1,0 +1,33 @@
+FieldEquals('status', 'published'):
+Home
+├─ Products
+│  └─ Phones
+├─ Blog
+└─ Contact
+
+FieldIn('id', [4, 6]) with KeepAncestors:
+Home
+├─ Products
+│  └─ Phones
+└─ Blog
+   └─ Old news
+
+AllOf(published, DepthRange(0, 1)):
+Home
+├─ Products
+├─ Blog
+└─ Contact
+
+Not(FieldEquals('status', 'archived')):
+Home
+├─ Products
+│  ├─ Laptops
+│  └─ Phones
+├─ Blog
+└─ Contact
+
+AnyOf(closure, FieldEquals) with KeepAncestors:
+Home
+├─ Products
+│  └─ Laptops
+└─ Contact

@@ -1,0 +1,9 @@
+Prune          + EvaluateDescendants  A
+Prune          + KeepDescendants      A[B[C, D[E]], F[G]]
+Prune          + DropDescendants      A
+KeepAncestors  + EvaluateDescendants  A[B[C, D[E]]], H[I]
+KeepAncestors  + KeepDescendants      A[B[C, D[E]], F[G]], H[I]
+KeepAncestors  + DropDescendants      A, H[I]
+Promote        + EvaluateDescendants  A[C, E], I
+Promote        + KeepDescendants      A[B[C, D[E]], F[G]], I
+Promote        + DropDescendants      A, I

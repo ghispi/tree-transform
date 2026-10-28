@@ -1,0 +1,22 @@
+array (
+  0 => 
+  array (
+    'depth' => 0,
+    'node' => 'Shop',
+  ),
+  1 => 
+  array (
+    'depth' => 1,
+    'node' => 'Clothing',
+  ),
+  2 => 
+  array (
+    'depth' => 1,
+    'node' => 'Electronics',
+  ),
+  3 => 
+  array (
+    'depth' => 1,
+    'node' => 'Garden',
+  ),
+)

@@ -10,7 +10,7 @@ use Ghispi\TreeTransform\Internal\Rows;
 /**
  * Reads a pre-order list of (depth, node) entries: the interchange format of this library.
  *
- * - new DepthListSource([[0, $a], [1, $b]]) reads [depth, node] pairs;
+ * - DepthListSource::pairs([[0, $a], [1, $b]]) reads [depth, node] pairs;
  * - DepthListSource::keyed($generator) reads depth => node keys, e.g. the output of Tree::iterate().
  *
  * Depths are validated (first 0, then at most previous + 1). Memory: O(1).

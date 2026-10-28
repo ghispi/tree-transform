@@ -1,0 +1,36 @@
+Array
+(
+    [0] => Array
+        (
+            [label] => Shop
+            [url] => /c/shop
+            [level] => 0
+            [children] => Array
+                (
+                    [0] => Array
+                        (
+                            [label] => Clothing
+                            [url] => /c/clothing
+                            [level] => 1
+                        )
+
+                    [1] => Array
+                        (
+                            [label] => Electronics
+                            [url] => /c/electronics
+                            [level] => 1
+                        )
+
+                    [2] => Array
+                        (
+                            [label] => Garden
+                            [url] => /c/garden
+                            [level] => 1
+                        )
+
+                )
+
+        )
+
+)
+map() called 4 times for 13 rows

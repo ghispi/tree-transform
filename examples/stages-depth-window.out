@@ -1,0 +1,19 @@
+Clothing
+├─ Men
+└─ Women
+Electronics
+├─ Phones
+└─ Laptops
+Garden
+└─ Tools
+
+depthWindow(2) (no upper limit):
+Men
+├─ Shirts
+└─ Shoes
+Women
+└─ Dresses
+Phones
+└─ Cases
+Laptops
+Tools

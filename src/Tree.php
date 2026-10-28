@@ -329,8 +329,9 @@ final readonly class Tree implements \IteratorAggregate
         string $parentField = 'parent_id',
         mixed $rootParent = null,
         ?\Closure $nodeFactory = null,
+        Accessor $accessor = new AutoAccessor(),
     ): array {
-        return $this->into(new AdjacencyListSink($idField, $parentField, $rootParent, $nodeFactory));
+        return $this->into(new AdjacencyListSink($idField, $parentField, $rootParent, $nodeFactory, $accessor));
     }
 
     /**

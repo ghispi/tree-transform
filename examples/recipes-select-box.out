@@ -1,0 +1,14 @@
+<select name="category">
+  <option value="2">Clothing</option>
+  <option value="3">&nbsp;&nbsp;Men</option>
+  <option value="4">&nbsp;&nbsp;&nbsp;&nbsp;Shirts</option>
+  <option value="5">&nbsp;&nbsp;&nbsp;&nbsp;Shoes</option>
+  <option value="6">&nbsp;&nbsp;Women</option>
+  <option value="7">&nbsp;&nbsp;&nbsp;&nbsp;Dresses</option>
+  <option value="8">Electronics</option>
+  <option value="9" selected>&nbsp;&nbsp;Phones</option>
+  <option value="10">&nbsp;&nbsp;&nbsp;&nbsp;Cases</option>
+  <option value="11">&nbsp;&nbsp;Laptops</option>
+  <option value="12">Garden</option>
+  <option value="13">&nbsp;&nbsp;Tools</option>
+</select>

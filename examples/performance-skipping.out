@@ -1,0 +1,3 @@
+Prune          kept  7 of 13 nodes, predicate called  8 times
+KeepAncestors  kept 13 of 13 nodes, predicate called 13 times
+map() after maxDepth(1) ran 4 times

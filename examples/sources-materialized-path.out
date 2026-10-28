@@ -1,0 +1,17 @@
+About
+└─ Team
+Blog
+├─ 2025
+│  └─ Hello world
+└─ 2026
+
+Only the blog posts:
+2025
+└─ Hello world
+2026
+
+Invalid tree at node '/blog/2025/hello': its parent path is missing or comes later. Order rows by path (binary collation) and include every ancestor.
+
+allowGaps: true
+Blog
+└─ Hello world

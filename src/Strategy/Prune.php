@@ -15,7 +15,7 @@ use Ghispi\TreeTransform\Predicate\Predicate;
  *     └─ F ✗   (and G)           H is cut with I although I matches)
  *     H ✗ ─ I ✓
  *
- * Streaming, O(depth) memory (O(1) with the default OnMatch). The cheapest strategy, and the default.
+ * Streaming, O(depth) memory (the ancestor path for predicates). The cheapest strategy, and the default.
  */
 final readonly class Prune implements FilterStrategy
 {

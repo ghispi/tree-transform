@@ -1,0 +1,9 @@
+A  Match
+├─ B  AncestorOfMatch
+│  ├─ C  Match
+│  └─ D  AncestorOfMatch
+│     └─ E  Match
+└─ F  DescendantOfMatch
+   └─ G  DescendantOfMatch
+H  AncestorOfMatch
+└─ I  Match

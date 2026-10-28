@@ -1,0 +1,9 @@
+A => match
+  B => ancestor
+    C => match
+    D => ancestor
+      E => match
+  F => descendant
+    G => descendant
+H => ancestor
+  I => match

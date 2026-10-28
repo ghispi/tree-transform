@@ -209,6 +209,8 @@ With `OnMatch`:
 | `KeepAncestors` + `KeepDescendants` | `A[B[C, D[E]], F[G]], H[I]` |
 | `Prune` + `DropDescendants` | `A` |
 | `Promote` + `DropDescendants` | `A, I` (first match per branch) |
+| `KeepAncestors` + `DropDescendants` | `A, H[I]` |
+| `Promote` + `KeepDescendants` | `A[B[C, D[E]], F[G]], I` |
 
 Streaming algorithms (sketch):
 
@@ -312,11 +314,12 @@ $tree->filter(fn (array $n, int $d, Ancestors $a) => $n['published'] && $a->ever
 
 | Sink | Output | Memory |
 |---|---|---|
-| `iterate()` / `FlatSink` | `Generator<int depth, mixed node>` — e.g. indented `<select>` | O(1), fully streaming |
+| `iterate()` | `Generator<int depth, mixed node>` — e.g. indented `<select>` | O(1), fully streaming |
+| `FlatListSink` | `list<array{depth, node}>` | O(output) |
 | `NestedArraySink` | nested arrays, configurable children key (`children`, Gedmo's `__children`), option to omit empty children | O(output) |
 | `AdjacencyListSink` | flat list with **rewritten** parent ids (matters after `Promote`) | O(output) |
 | `NestedSetSink` | flat list in pre-order with **recomputed** `lft` / `rgt` / `level` | O(output) |
-| `CountSink`, `IdsSink` | counts / id lists | O(1) / O(output) |
+| `CountSink` | node count | O(1) |
 
 Building nested arrays uses a stack of child lists that are attached to the parent when a level closes — no PHP
 references, relying on copy-on-write.

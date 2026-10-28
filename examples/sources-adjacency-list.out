@@ -1,0 +1,16 @@
+About us
+└─ Careers
+Help
+├─ Returns
+└─ Shipping
+
+OrphanPolicy::AsRoot:
+Returns
+Shipping
+└─ Delivery times
+
+OrphanPolicy::Drop:
+(empty)
+
+OrphanPolicy::Throw (default):
+Parent 10 of 2 node(s) does not exist. If this value marks root nodes, pass it as "rootParent"; otherwise choose an OrphanPolicy (AsRoot or Drop).

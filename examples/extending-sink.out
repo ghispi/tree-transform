@@ -1,0 +1,14 @@
+<ul>
+  <li>Clothing
+    <ul>
+      <li>Men</li>
+      <li>Women</li>
+    </ul>
+  </li>
+  <li>Electronics
+    <ul>
+      <li>Phones</li>
+      <li>Laptops</li>
+    </ul>
+  </li>
+</ul>

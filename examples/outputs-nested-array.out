@@ -1,0 +1,11 @@
+Default: every node gets a 'children' key
+[{"id":1,"title":"Clothing","children":[{"id":2,"title":"Men","children":[]},{"id":3,"title":"Women","children":[]}]}]
+
+omitEmptyChildren: true
+[{"id":1,"title":"Clothing","children":[{"id":2,"title":"Men"},{"id":3,"title":"Women"}]}]
+
+childrenKey: '__children' (same shape as Gedmo buildTree())
+[{"id":1,"title":"Clothing","__children":[{"id":2,"title":"Men","__children":[]},{"id":3,"title":"Women","__children":[]}]}]
+
+nodeFactory: build any shape
+[{"text":"Clothing","level":0,"nodes":[{"text":"Men","level":1,"nodes":[]},{"text":"Women","level":1,"nodes":[]}]}]

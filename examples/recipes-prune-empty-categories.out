@@ -1,0 +1,8 @@
+Shop
+├─ Clothing
+│  └─ Men (4)
+│     └─ Shirts (12)
+└─ Electronics
+   ├─ Phones
+   │  └─ Cases (30)
+   └─ Laptops (7)

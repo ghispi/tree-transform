@@ -1,0 +1,4 @@
+nested set:        Clothing (depth 0), Men (depth 1)
+adjacency list:    Clothing (depth 0), Men (depth 1)
+materialized path: Clothing (depth 0), Men (depth 1)
+nested array:      Clothing (depth 0), Men (depth 1)

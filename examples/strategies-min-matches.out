@@ -1,0 +1,16 @@
+MinMatches(1):
+A
+└─ B
+   ├─ C
+   └─ D
+      └─ E
+H
+└─ I
+
+MinMatches(2):
+A
+└─ B
+
+MinMatches(3):
+A
+

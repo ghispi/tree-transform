@@ -1,0 +1,13 @@
+A
+└─ (2 hidden)
+(1 hidden)
+
+With OnMatch::KeepDescendants:
+A
+├─ B
+│  ├─ C
+│  └─ D
+│     └─ E
+└─ F
+   └─ G
+(1 hidden)

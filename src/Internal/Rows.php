@@ -23,6 +23,17 @@ final class Rows
         if (\is_array($rows)) {
             return new \ArrayIterator($rows);
         }
+        if ($rows instanceof \Generator) {
+            try {
+                $rows->rewind();
+            } catch (\Exception) {
+                throw new \Ghispi\TreeTransform\Exception\LogicException(
+                    'This source reads a generator, which can only be traversed once. Use Tree::lazy() or LazySource to read it again.',
+                );
+            }
+
+            return $rows;
+        }
         if ($rows instanceof \Iterator) {
             return $rows;
         }

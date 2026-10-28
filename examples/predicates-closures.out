@@ -1,0 +1,16 @@
+Shop
+└─ Clothing
+   └─ Men
+      └─ Shirts
+
+Shop
+└─ Clothing
+   ├─ Men
+   └─ Sale
+
+Shop
+└─ Clothing
+   ├─ Men
+   └─ Sale
+
+Shop
