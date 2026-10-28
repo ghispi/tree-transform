@@ -1,0 +1,62 @@
+{
+    "name": "ghispi/tree-transform",
+    "description": "Efficient, streaming filtering and transformation of trees (nested set, adjacency list, materialized path, nested arrays) with pluggable strategies. Works with Gedmo Doctrine tree behaviours.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "tree",
+        "nested set",
+        "adjacency list",
+        "materialized path",
+        "doctrine",
+        "gedmo",
+        "filter"
+    ],
+    "homepage": "https://github.com/ghispi/tree-transform",
+    "support": {
+        "issues": "https://github.com/ghispi/tree-transform/issues",
+        "source": "https://github.com/ghispi/tree-transform"
+    },
+    "authors": [
+        {
+            "name": "ghispi",
+            "homepage": "https://github.com/ghispi"
+        }
+    ],
+    "require": {
+        "php": ">=8.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "infection/infection": "^0.29",
+        "phpbench/phpbench": "^1.3"
+    },
+    "suggest": {
+        "gedmo/doctrine-extensions": "To use the Gedmo tree bridge (auto-configured sources)",
+        "doctrine/orm": "To stream tree rows from the database"
+    },
+    "conflict": {
+        "gedmo/doctrine-extensions": "<3.0",
+        "doctrine/orm": "<3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ghispi\\TreeTransform\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ghispi\\TreeTransform\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "infection/extension-installer": true
+        }
+    },
+    "minimum-stability": "stable"
+}

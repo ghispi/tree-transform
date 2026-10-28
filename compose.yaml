@@ -1,0 +1,16 @@
+services:
+  php:
+    build:
+      context: docker/php
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.4}
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: tree-transform-php:${PHP_VERSION:-8.4}
+    volumes:
+      - .:/app
+      - composer-cache:/home/app/.composer/cache
+    working_dir: /app
+
+volumes:
+  composer-cache:

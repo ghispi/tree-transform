@@ -1,0 +1,8 @@
+/vendor/
+/var/
+/composer.lock
+.phpunit.cache/
+.php-cs-fixer.cache
+infection.log
+/.remember/
+.claude/settings.local.json
