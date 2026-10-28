@@ -7,11 +7,8 @@ namespace Ghispi\TreeTransform\Tests\Unit\Stage;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Stage\Filter;
 use Ghispi\TreeTransform\Stage\Limit;
-use Ghispi\TreeTransform\Stage\LimitCursor;
 use Ghispi\TreeTransform\Stage\Map;
-use Ghispi\TreeTransform\Stage\MapCursor;
 use Ghispi\TreeTransform\Stage\SortSiblings;
-use Ghispi\TreeTransform\Stage\SortSiblingsCursor;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
@@ -22,11 +19,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Limit::class)]
-#[CoversClass(LimitCursor::class)]
 #[CoversClass(Map::class)]
-#[CoversClass(MapCursor::class)]
 #[CoversClass(SortSiblings::class)]
-#[CoversClass(SortSiblingsCursor::class)]
 #[CoversClass(Filter::class)]
 final class OtherStagesTest extends TestCase
 {

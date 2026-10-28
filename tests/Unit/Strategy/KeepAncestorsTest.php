@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Strategy;
 use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
-use Ghispi\TreeTransform\Strategy\KeepAncestorsCursor;
 use Ghispi\TreeTransform\Strategy\OnMatch;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(KeepAncestors::class)]
-#[CoversClass(KeepAncestorsCursor::class)]
 final class KeepAncestorsTest extends TestCase
 {
     /**

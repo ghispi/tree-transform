@@ -9,7 +9,6 @@ use Ghispi\TreeTransform\Source\DepthListSource;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\OnMatch;
 use Ghispi\TreeTransform\Strategy\Placeholder;
-use Ghispi\TreeTransform\Strategy\PlaceholderCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
@@ -20,7 +19,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Placeholder::class)]
-#[CoversClass(PlaceholderCursor::class)]
 final class PlaceholderTest extends TestCase
 {
     /**

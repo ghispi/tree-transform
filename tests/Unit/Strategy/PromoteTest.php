@@ -8,7 +8,6 @@ use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\OnMatch;
 use Ghispi\TreeTransform\Strategy\Promote;
-use Ghispi\TreeTransform\Strategy\PromoteCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Promote::class)]
-#[CoversClass(PromoteCursor::class)]
 final class PromoteTest extends TestCase
 {
     /**

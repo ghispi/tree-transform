@@ -6,7 +6,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Source;
 
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
-use Ghispi\TreeTransform\Source\PreorderedAdjacencyCursor;
 use Ghispi\TreeTransform\Source\PreorderedAdjacencySource;
 use Ghispi\TreeTransform\Tests\Fixtures\Matrix;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
@@ -16,7 +15,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(PreorderedAdjacencySource::class)]
-#[CoversClass(PreorderedAdjacencyCursor::class)]
 final class PreorderedAdjacencySourceTest extends TestCase
 {
     /**

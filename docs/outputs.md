@@ -184,6 +184,55 @@ Source: [`examples/outputs-iterate.php`](../examples/outputs-iterate.php)
 Gotcha: keys are depths, so they repeat. `iterator_to_array($tree->iterate())` keeps one node per depth. Use
 `iterator_to_array($tree->iterate(), false)` for a plain list of nodes, or `toFlatList()` to keep the depths.
 
+To skip a subtree while iterating, drive the generator yourself and call `send(true)` instead of `next()`: it moves
+past the current node's descendants, and the source does not read them further (like `skipSubtree()` on a cursor).
+
+<!-- example: outputs-iterate-skip -->
+```php
+use Ghispi\TreeTransform\Tree;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$rows = require __DIR__ . '/support/shop.php';
+
+// A sitemap that does not descend into Electronics: send(true) instead of next() skips the current node's subtree.
+// The source skips those rows without reading them further.
+$nodes = Tree::fromNestedSet($rows)->iterate();
+while ($nodes->valid()) {
+    $depth = $nodes->key();
+    $category = $nodes->current();
+    echo str_repeat('    ', $depth), $category['title'], "\n";
+
+    if ($category['title'] === 'Electronics') {
+        $nodes->send(true);
+    } else {
+        $nodes->next();
+    }
+}
+```
+
+Output:
+
+```text
+Shop
+    Clothing
+        Men
+            Shirts
+            Shoes
+        Women
+            Dresses
+    Electronics
+    Garden
+        Tools
+```
+
+Source: [`examples/outputs-iterate-skip.php`](../examples/outputs-iterate-skip.php)
+<!-- /example -->
+
+Do not mix this with `foreach`: `foreach` calls `next()` on its own, so a `send(true)` inside it advances twice and
+drops the node after the skipped subtree. Start the generator (`valid()`, `current()` or `key()`) before the first
+`send()`, as the loop above does; on an unstarted generator PHP first runs to the first node and then skips it.
+
 The output of `iterate()` can feed another pipeline: `Tree::fromDepthList($tree->iterate())`. See
 [Sources → Depth lists](sources.md#depth-lists).
 

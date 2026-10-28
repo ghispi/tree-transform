@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Source;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
-use Ghispi\TreeTransform\Source\MaterializedPathCursor;
 use Ghispi\TreeTransform\Source\MaterializedPathFields;
 use Ghispi\TreeTransform\Source\MaterializedPathSource;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
@@ -20,7 +19,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(MaterializedPathSource::class)]
-#[CoversClass(MaterializedPathCursor::class)]
 #[CoversClass(MaterializedPathFields::class)]
 final class MaterializedPathSourceTest extends TestCase
 {

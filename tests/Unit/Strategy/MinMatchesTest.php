@@ -9,7 +9,6 @@ use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
 use Ghispi\TreeTransform\Strategy\MinMatches;
-use Ghispi\TreeTransform\Strategy\MinMatchesCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(MinMatches::class)]
-#[CoversClass(MinMatchesCursor::class)]
 final class MinMatchesTest extends TestCase
 {
     /**

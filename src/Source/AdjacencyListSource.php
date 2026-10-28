@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Source;
 
 use Ghispi\TreeTransform\Accessor\Accessor;
+use Ghispi\TreeTransform\Accessor\ArrayKeyAccessor;
 use Ghispi\TreeTransform\Accessor\AutoAccessor;
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\CycleDetectedException;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\OrphanNodeException;
+use Ghispi\TreeTransform\Internal\GeneratorCursor;
+use Ghispi\TreeTransform\Internal\OffsetTree;
 use Ghispi\TreeTransform\Internal\Rows;
+use Ghispi\TreeTransform\Internal\StreamSource;
 
 /**
  * Reads id/parent rows in any order.
@@ -22,7 +26,7 @@ use Ghispi\TreeTransform\Internal\Rows;
  * Roots are rows whose parent is null or equal to $rootParent. Siblings keep input order unless $siblingOrder names
  * a field to sort them by (ascending, <=>). Duplicate ids, parent cycles and (by default) missing parents throw.
  */
-final readonly class AdjacencyListSource implements Source
+final readonly class AdjacencyListSource implements Source, StreamSource
 {
     /**
      * @param iterable<mixed> $rows
@@ -40,54 +44,90 @@ final readonly class AdjacencyListSource implements Source
 
     public function open(): Cursor
     {
-        $readId = $this->accessor->reader($this->fields->id);
-        $readParent = $this->accessor->reader($this->fields->parent);
+        return new GeneratorCursor($this->stream());
+    }
+
+    /**
+     * @internal
+     *
+     * @return \Generator<int, mixed, bool|null, void>
+     */
+    public function stream(): \Generator
+    {
+        $idField = $this->fields->id;
+        $parentField = $this->fields->parent;
+        $readId = $this->accessor->reader($idField);
+        $readParent = $this->accessor->reader($parentField);
+        // Array rows read through the default accessors are read inline, without a closure call per field.
+        $inline = $this->accessor instanceof ArrayKeyAccessor || $this->accessor instanceof AutoAccessor;
         $rootParent = $this->rootParent === null ? null : Rows::key($this->rootParent);
 
         $nodes = [];
         /** @var array<int|string, int> $offsetById */
         $offsetById = [];
-        /** @var array<int|string, list<int>> $childrenByParentId */
-        $childrenByParentId = [];
+        /** @var array<int, int|string> $parentIds parent id of every non-root row, by offset */
+        $parentIds = [];
         $roots = [];
 
         $offset = 0;
-        // Arrays are read with foreach (no copy); other iterables through an Iterator (detects reused generators).
-        $rows = \is_array($this->rows) ? $this->rows : self::each(Rows::iterator($this->rows));
-        foreach ($rows as $row) {
+        foreach (Rows::each($this->rows) as $row) {
             $nodes[$offset] = $row;
-            $id = Rows::key($readId($row));
+            if ($inline && \is_array($row)) {
+                $id = $row[$idField] ?? null;
+                $parent = $row[$parentField] ?? null;
+            } else {
+                $id = $readId($row);
+                $parent = $readParent($row);
+            }
+            if (!\is_int($id)) {
+                $id = Rows::key($id);
+            }
             if (isset($offsetById[$id])) {
                 throw InvalidTreeException::at($id, 'duplicate id.');
             }
             $offsetById[$id] = $offset;
-            $parent = $readParent($row);
-            if ($parent === null || ($rootParent !== null && Rows::key($parent) === $rootParent)) {
+            if ($parent === null) {
                 $roots[] = $offset;
             } else {
-                $parentKey = Rows::key($parent);
-                if ($parentKey === $id) {
+                $parentKey = \is_int($parent) ? $parent : Rows::key($parent);
+                if ($parentKey === $rootParent) {
+                    $roots[] = $offset;
+                } elseif ($parentKey === $id) {
                     throw CycleDetectedException::forIds([$id]);
+                } else {
+                    $parentIds[$offset] = $parentKey;
                 }
-                $childrenByParentId[$parentKey][] = $offset;
             }
             ++$offset;
         }
 
-        /** @var array<int, list<int>> $children */
+        // Second pass, in input order: child lists keep input order without merging.
+        /** @var array<int, list<int>> $children child offsets by parent offset */
         $children = [];
-        foreach ($childrenByParentId as $parentId => $list) {
+        /** @var array<int|string, list<int>> $orphans by missing parent id */
+        $orphans = [];
+        // Whether a child comes before its parent; if none does, following parents always leads to earlier rows.
+        $forward = false;
+        foreach ($parentIds as $child => $parentId) {
             if (isset($offsetById[$parentId])) {
-                $children[$offsetById[$parentId]] = $list;
-                continue;
+                $parentOffset = $offsetById[$parentId];
+                if ($parentOffset > $child) {
+                    $forward = true;
+                }
+                $children[$parentOffset][] = $child;
+            } else {
+                $orphans[$parentId][] = $child;
             }
+        }
+        unset($parentIds);
+
+        foreach ($orphans as $parentId => $list) {
             match ($this->orphans) {
                 OrphanPolicy::Throw => throw OrphanNodeException::forParent($parentId, \count($list)),
                 OrphanPolicy::AsRoot => array_push($roots, ...$list),
                 OrphanPolicy::Drop => null,
             };
         }
-        unset($childrenByParentId);
 
         if ($this->orphans === OrphanPolicy::AsRoot) {
             sort($roots); // keep input order across real roots and promoted orphans
@@ -103,9 +143,11 @@ final readonly class AdjacencyListSource implements Source
             unset($list);
         }
 
-        $this->assertNoCycles($roots, $children, $offset, $offsetById);
+        if ($forward) {
+            $this->assertNoCycles($roots, $children, $offset, $offsetById);
+        }
 
-        return new AdjacencyListCursor($nodes, $roots, $children);
+        return OffsetTree::stream($nodes, $roots, $children);
     }
 
     /**
@@ -115,9 +157,13 @@ final readonly class AdjacencyListSource implements Source
      */
     private function assertNoCycles(array $roots, array $children, int $total, array $offsetById): void
     {
+        // Dropped orphans are unreachable on purpose; only unreachable nodes in cycles are an error.
+        $starts = $this->orphans === OrphanPolicy::Drop
+            ? [...$roots, ...self::droppedOrphans($roots, $children, $total)]
+            : $roots;
+
         $reachable = 0;
-        $stack = $roots;
-        $dropped = 0;
+        $stack = $starts;
         while ($stack !== []) {
             $offset = array_pop($stack);
             ++$reachable;
@@ -125,16 +171,12 @@ final readonly class AdjacencyListSource implements Source
                 array_push($stack, ...$children[$offset]);
             }
         }
-        if ($this->orphans === OrphanPolicy::Drop) {
-            // Dropped orphans are unreachable on purpose; only unreachable nodes in cycles are an error.
-            $dropped = $this->countDroppedSubtrees($roots, $children, $total);
-        }
-        if ($reachable + $dropped === $total) {
+        if ($reachable === $total) {
             return;
         }
 
         $seen = [];
-        $stack = $roots;
+        $stack = $starts;
         while ($stack !== []) {
             $offset = array_pop($stack);
             $seen[$offset] = true;
@@ -153,13 +195,15 @@ final readonly class AdjacencyListSource implements Source
     }
 
     /**
-     * Counts nodes that are unreachable because an ancestor's parent is missing (dropped orphans), as opposed to
-     * nodes in a cycle. A cycle has no member whose parent is missing.
+     * Offsets of rows whose parent is missing (dropped orphans), as opposed to nodes in a cycle: a cycle has no
+     * member whose parent is missing.
      *
      * @param list<int>             $roots
      * @param array<int, list<int>> $children
+     *
+     * @return list<int>
      */
-    private function countDroppedSubtrees(array $roots, array $children, int $total): int
+    private static function droppedOrphans(array $roots, array $children, int $total): array
     {
         // Every offset that appears as someone's child has an existing parent.
         $hasParent = [];
@@ -169,33 +213,13 @@ final readonly class AdjacencyListSource implements Source
             }
         }
         $isRoot = array_fill_keys($roots, true);
-        $stack = [];
+        $orphans = [];
         for ($offset = 0; $offset < $total; ++$offset) {
             if (!isset($hasParent[$offset]) && !isset($isRoot[$offset])) {
-                $stack[] = $offset; // a dropped orphan
-            }
-        }
-        $count = 0;
-        while ($stack !== []) {
-            $offset = array_pop($stack);
-            ++$count;
-            if (isset($children[$offset])) {
-                array_push($stack, ...$children[$offset]);
+                $orphans[] = $offset;
             }
         }
 
-        return $count;
-    }
-
-    /**
-     * @param \Iterator<mixed> $iterator
-     *
-     * @return \Generator<mixed>
-     */
-    private static function each(\Iterator $iterator): \Generator
-    {
-        for ($iterator->rewind(); $iterator->valid(); $iterator->next()) {
-            yield $iterator->current();
-        }
+        return $orphans;
     }
 }

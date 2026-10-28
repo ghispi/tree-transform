@@ -8,7 +8,6 @@ use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\ActiveTrail;
-use Ghispi\TreeTransform\Strategy\ActiveTrailCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(ActiveTrail::class)]
-#[CoversClass(ActiveTrailCursor::class)]
 final class ActiveTrailTest extends TestCase
 {
     /**

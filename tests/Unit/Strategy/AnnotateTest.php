@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Strategy;
 use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Source\Source;
 use Ghispi\TreeTransform\Strategy\Annotate;
-use Ghispi\TreeTransform\Strategy\AnnotateCursor;
 use Ghispi\TreeTransform\Strategy\Annotated;
 use Ghispi\TreeTransform\Strategy\MatchState;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Annotate::class)]
-#[CoversClass(AnnotateCursor::class)]
 #[CoversClass(Annotated::class)]
 final class AnnotateTest extends TestCase
 {

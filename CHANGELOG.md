@@ -5,6 +5,32 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Internal pipeline rewritten on generators (roadmap 0.4): built-in sources, strategies, stages and sinks pass nodes
+  as one chain of generators instead of cursor objects. Pipelines run about 1.5–3× faster; the public `Cursor`,
+  `Source`, `Stage`, `FilterStrategy` and `Sink` contracts are unchanged, and user implementations keep working.
+- An exception thrown while reading (by a predicate, a callback or input validation) now ends the traversal: a
+  caller that catches it and calls `next()` again gets `false`, instead of the remaining nodes.
+- `NestedArraySource` rewinds its input when it is opened, like the other sources: a used generator throws
+  `LogicException` from `open()` instead of from the first `next()`.
+- `AdjacencyListSource` builds its index faster: inline reads of array rows, children resolved in a second pass in
+  input order, and the cycle check runs only when a child comes before its parent.
+
+### Added
+
+- `Tree::iterate()`: `send(true)` on the returned generator skips the current node's subtree.
+
+### Fixed
+
+- `AdjacencyListSource` with `OrphanPolicy::Drop`: the cycle error no longer counts and names dropped orphans as
+  cycle members.
+
+### Removed
+
+- The internal `*Cursor` classes (`NestedSetCursor`, `PruneCursor`, …). They were marked `@internal`; use the
+  sources' `open()`, the strategies' and stages' `apply()`, or `Tree::cursor()` for a `Cursor`.
+
 ## [0.1.0] - 2026-10-28
 
 First release.

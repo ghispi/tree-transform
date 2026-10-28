@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Stage;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Source\DepthListSource;
 use Ghispi\TreeTransform\Stage\DepthWindow;
-use Ghispi\TreeTransform\Stage\DepthWindowCursor;
 use Ghispi\TreeTransform\Stage\MaxDepth;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
@@ -20,7 +19,6 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(MaxDepth::class)]
 #[CoversClass(DepthWindow::class)]
-#[CoversClass(DepthWindowCursor::class)]
 final class DepthStagesTest extends TestCase
 {
     /**

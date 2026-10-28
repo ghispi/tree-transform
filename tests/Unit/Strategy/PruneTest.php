@@ -20,7 +20,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Prune::class)]
-#[CoversClass(\Ghispi\TreeTransform\Strategy\PruneCursor::class)]
 final class PruneTest extends TestCase
 {
     /**

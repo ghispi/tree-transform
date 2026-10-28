@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Sink;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
+use Ghispi\TreeTransform\Internal\Stream;
+use Ghispi\TreeTransform\Internal\StreamSink;
 
 /**
  * Builds nested arrays: a list of roots, each with its children.
@@ -16,8 +18,9 @@ use Ghispi\TreeTransform\Cursor\Cursor;
  * Built bottom-up without recursion or references. Memory: the size of the result.
  *
  * @implements Sink<list<mixed>>
+ * @implements StreamSink<list<mixed>>
  */
-final readonly class NestedArraySink implements Sink
+final readonly class NestedArraySink implements Sink, StreamSink
 {
     /**
      * @param string                                         $childrenKey       key for children of array payloads
@@ -37,6 +40,18 @@ final readonly class NestedArraySink implements Sink
      */
     public function consume(Cursor $cursor): array
     {
+        return $this->drain(Stream::of($cursor));
+    }
+
+    /**
+     * @internal
+     *
+     * @param \Generator<int, mixed, bool|null, mixed> $input
+     *
+     * @return list<mixed>
+     */
+    public function drain(\Generator $input): array
+    {
         $roots = [];
         /** @var array<int, mixed> $nodes */
         $nodes = [];
@@ -44,8 +59,7 @@ final readonly class NestedArraySink implements Sink
         $children = [];
         $top = -1;
 
-        while ($cursor->next()) {
-            $depth = $cursor->depth();
+        foreach ($input as $depth => $node) {
             while ($top >= $depth) {
                 $built = $this->build($nodes[$top], $children[$top], $top);
                 unset($nodes[$top], $children[$top]);
@@ -56,7 +70,7 @@ final readonly class NestedArraySink implements Sink
                 }
             }
             $top = $depth;
-            $nodes[$top] = $cursor->node();
+            $nodes[$top] = $node;
             $children[$top] = [];
         }
         while ($top >= 0) {

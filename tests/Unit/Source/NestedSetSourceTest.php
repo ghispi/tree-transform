@@ -8,7 +8,6 @@ use Ghispi\TreeTransform\Accessor\PrivatePropertyAccessor;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
 use Ghispi\TreeTransform\Exception\TreeTransformException;
-use Ghispi\TreeTransform\Source\NestedSetCursor;
 use Ghispi\TreeTransform\Source\NestedSetFields;
 use Ghispi\TreeTransform\Source\NestedSetSource;
 use Ghispi\TreeTransform\Tests\Fixtures\CountingAccessor;
@@ -22,7 +21,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(NestedSetSource::class)]
-#[CoversClass(NestedSetCursor::class)]
 #[CoversClass(NestedSetFields::class)]
 final class NestedSetSourceTest extends TestCase
 {

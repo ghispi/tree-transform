@@ -25,6 +25,46 @@ docker compose run --rm php vendor/bin/phpbench run benchmarks --report=aggregat
 docker compose run --rm php php benchmarks/report.php var/bench.xml [more.xml …]   # these tables
 ```
 
+## 0.4: generator pipeline vs v0.1.0
+
+Roadmap 0.4 replaced the cursor objects between built-ins with one chain of generators (proposal #1 below) and
+rebuilt the adjacency index. Same machine, same settings, the two versions run back to back
+(`var/bench-v010.xml` from a `git archive` of v0.1.0, `var/bench-040.xml`); the naive baselines, which do not use
+the library, came out within ±5 % between the two runs, so the machine was steady. Medians, balanced-300k /
+category-100k:
+
+| Subject | v0.1.0 | 0.4 | Speed-up |
+|---|---|---|---|
+| nested set → `count()` | 64.8 / 21.9 ms | 27.5 / 10.0 ms | 2.2× – 2.4× |
+| `Prune` 90 % kept → `count()` | 77.0 / 28.0 ms | 39.2 / 16.1 ms | 1.7× – 2.0× |
+| `Prune` 10 % kept → `count()` | 22.6 / 7.6 ms | 10.2 / 3.5 ms | 2.2× |
+| `KeepAncestors` → `count()` | 98.3 / 36.3 ms | 50.6 / 18.6 ms | 1.9× – 2.0× |
+| `Promote` → `count()` | 99.3 / 31.3 ms | 48.3 / 17.2 ms | 1.8× – 2.1× |
+| `Annotate` → `count()` | 230.4 / 73.1 ms | 132.8 / 44.3 ms | 1.7× |
+| `ActiveTrail` (one active node) → `count()` | 128.4 / 43.5 ms | 65.7 / 25.6 ms | 1.7× – 2.0× |
+| `iterate()` (nested set) | 76.8 / 26.7 ms | 31.3 / 11.3 ms | 2.4× |
+| materialized path → `iterate()` | 125.4 / 42.1 ms | 85.4 / 27.8 ms | 1.5× |
+| adjacency list, any order → `iterate()` | 118.4 / 46.7 ms | 67.1 / 26.6 ms | 1.8× |
+| `toNestedArray()` (sink, every node) | 139.2 / 53.2 ms | 94.1 / 35.9 ms | 1.5× |
+| nested set → `KeepAncestors` → nested array | 121.9 / 43.5 ms | 76.4 / 26.0 ms | 1.6× – 1.7× |
+| streaming nested set → `Prune`, 1.1M nodes | 817.7 ms | 550.3 ms | 1.5× (memory 1.0 MiB at every size, unchanged) |
+
+Against the naive "build the full tree, then filter" baseline at 0.4:
+
+- **nested set → KeepAncestors → nested array: 1.9× (balanced-300k), 2.1× (wide-100k), 2.3× (category-100k) faster**,
+  1.0× on the 10k deep chain. This meets the SPEC §10 "≥ 2× faster" target on the realistic shapes, where Phase 0
+  predicted 2.5× – 2.7× for the prototype (which had no multi-root support, accessors or validation).
+- nested set → Prune → nested array: 1.4× faster (85.6 vs 117.7 ms). The sink copying ~55 % of the rows is the floor.
+- adjacency list in any order: KeepAncestors 1.1× – 1.3× faster, Prune 0.9× – 1.0× (the index build stays the cost).
+- Memory is unchanged: the library's own peak is 3–6× lower than the naive code's.
+
+The adjacency index (inline array reads, children resolved in a second pass in input order, the cycle check only
+when a child comes before its parent) accounts for part of the adjacency gain. On shuffled input the cycle check
+runs and the gain is smaller (ad-hoc, 300k rows: ~7 %). Its own memory is 35 MiB at 300k rows (30 MiB in v0.1.0:
+the second pass keeps the parent ids of all rows while it runs).
+
+The full tables further down are from v0.1.0; regenerate them with the commands above.
+
 ## Spec targets (SPEC §10)
 
 | Target | Result | Verdict |

@@ -50,6 +50,18 @@ or does not match a predicate.
 
 Every stage is a `Cursor` decorator, so stages compose freely and a strategy never needs to know the storage format.
 
+Internally (since 0.4) built-ins run as one chain of generators (`Internal\Stream`): each yields `depth => node` in
+pre-order, and the consumer advances it with `next()`, or with `send(true)` to skip the subtree of the node it just
+received (`yield` returns `true` in the producer). Built-ins implement internal interfaces next to the public ones
+(`StreamSource::stream()`, `StreamStage::stream($input)`, `StreamStrategy::stream($input, $predicate)`,
+`StreamSink::drain($input)`); their public `open()` / `apply()` / `consume()` wrap the same code in
+`GeneratorCursor`. `Tree` builds the stream directly and only adapts at user extensions: a user `Source`, `Stage`,
+`FilterStrategy` or `Sink` gets a `GeneratorCursor`, and its returned cursor is read back into a stream (an unused
+`GeneratorCursor` returned unchanged gives back its generator). Preparation that may fail (reused generators, the
+adjacency index) still happens when a source is opened, not at the first node. An exception thrown inside the
+stream (by a predicate, a callback or input validation) ends it: a caller that catches it and calls `next()` again
+gets `false`.
+
 ### 3.1 Core contracts
 
 ```php
@@ -114,9 +126,10 @@ interface Sink
 }
 ```
 
-Why a cursor class instead of `Generator::send()`: explicit `skipSubtree()` is easier to reason about and test, and it
-lets sources skip work. Phase 0 measured a generator-based internal pipeline 1.65–1.9× faster like-for-like; it is
-planned as an internal change behind the same public `Cursor` contract (roadmap).
+Why a cursor class in the public contract instead of `Generator::send()`: explicit `skipSubtree()` is easier to
+reason about, test and implement in user code. Phase 0 measured generators 1.65–1.9× faster like-for-like, so since
+0.4 they are the internal representation behind the same public `Cursor` contract (§3). `Tree::iterate()` exposes
+the stream: `send(true)` on it skips the current node's subtree.
 
 ### 3.2 Field access
 
@@ -394,12 +407,13 @@ Before 1.0 it is split into `ghispi/tree-transform-gedmo` if it grows its own re
 | Target | Status |
 |---|---|
 | Streaming strategies: peak memory independent of n (asserted in tests: 1.1M nodes under 2 MB growth) | met |
-| ≥ 1M nodes/s for `Prune` over an array nested set | met (2–8M nodes/s) |
+| ≥ 1M nodes/s for `Prune` over an array nested set | met (5–30M nodes/s since 0.4) |
 | Much lower memory than a naive "build the full tree, then filter" baseline | met (2–9× lower) |
-| Faster than that baseline for pre-ordered inputs (nested set → `KeepAncestors` → nested array) | met (~1.2×) |
-| ~~≥ 2× faster than the naive baseline~~ | revised: only reachable with a generator-based internal pipeline (measured 2.5× for `KeepAncestors`), see roadmap |
+| Faster than that baseline for pre-ordered inputs (nested set → `KeepAncestors` → nested array) | met (~1.9–2.3× since 0.4) |
+| ≥ 2× faster than the naive baseline | met with the generator pipeline (0.4) for nested set → `KeepAncestors` → nested array: 1.9× balanced-300k, 2.1× wide-100k, 2.3× category-100k |
 
-Adjacency lists in arbitrary order stay slower than the naive baseline (index build and cycle check); use
+Adjacency lists in arbitrary order stay close to the naive baseline (`KeepAncestors` 1.1–1.3× faster, `Prune` about
+0.9×: index build, and a cycle check when a child comes before its parent); use
 `PreorderedAdjacencySource` or a nested set when speed matters.
 
 ### Benchmarks (phpbench)
@@ -462,7 +476,7 @@ docs/
 | **0.1** | Cursor, all sources, `Prune` / `KeepAncestors` / `Promote` + `OnMatch`, `ActiveTrail`, predicates with lazy `Ancestors`, `iterate` / nested array / adjacency sinks, facade, differential tests, docs for all of it. |
 | **0.2** | `NestedSetSink`, `Annotate`, `Map` / `MaxDepth` / `Limit` / `DepthWindow`, Gedmo bridge (incl. `ActiveTrail` pushdown) + integration tests. |
 | **0.3** | `Placeholder`, `MinMatches`, `SortSiblings`. |
-| **0.4** | Generator-based internal pipeline behind the `Cursor` contract (measured 2.1–3.4× faster pipelines), faster adjacency index. |
+| **0.4** | Generator-based internal pipeline behind the `Cursor` contract, faster adjacency index (two passes, inline reads, cycle check only when a child precedes its parent). |
 | **1.0** | API freeze, docs site, benchmark report published. |
 
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.

@@ -166,4 +166,55 @@ final class RowsTest extends TestCase
         self::assertNull(Rows::declaringClass(ChildEntity::class, 'missing'));
         self::assertNull(Rows::declaringClass(\stdClass::class, 'lft'));
     }
+
+    public function testEachKeepsArraysAsTheyAre(): void
+    {
+        $rows = [3 => 'a', 'k' => 'b'];
+
+        self::assertSame($rows, Rows::each($rows));
+        self::assertSame([], Rows::each([]));
+    }
+
+    public function testEachReturnsAnEmptyGeneratorAsEmptyArray(): void
+    {
+        $empty = (static function (): \Generator {
+            yield from [];
+        })();
+
+        $rows = Rows::each($empty);
+
+        self::assertSame([], $rows);
+        self::assertSame([], [...$rows]);
+    }
+
+    public function testEachReturnsAPrimedGeneratorSoForeachSeesEveryRow(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 'x' => 1;
+            yield 'y' => 2;
+        })();
+
+        $rows = Rows::each($generator);
+
+        self::assertSame($generator, $rows);
+        self::assertSame(['x' => 1, 'y' => 2], iterator_to_array($rows));
+    }
+
+    public function testEachWrapsOtherTraversables(): void
+    {
+        self::assertSame([1, 2], iterator_to_array(Rows::each(new \ArrayObject([1, 2]))));
+    }
+
+    public function testEachRejectsAUsedGeneratorImmediately(): void
+    {
+        $generator = (static function (): \Generator {
+            yield 1;
+        })();
+        foreach ($generator as $ignored) {
+            // consume
+        }
+
+        $this->expectException(LogicException::class);
+        Rows::each($generator);
+    }
 }

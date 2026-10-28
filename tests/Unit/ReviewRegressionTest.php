@@ -6,14 +6,9 @@ namespace Ghispi\TreeTransform\Tests\Unit;
 
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Internal\Rows;
-use Ghispi\TreeTransform\Source\MaterializedPathCursor;
 use Ghispi\TreeTransform\Source\MaterializedPathFields;
-use Ghispi\TreeTransform\Source\NestedSetCursor;
 use Ghispi\TreeTransform\Source\NestedSetFields;
-use Ghispi\TreeTransform\Strategy\ActiveTrailCursor;
-use Ghispi\TreeTransform\Strategy\AnnotateCursor;
 use Ghispi\TreeTransform\Strategy\MinMatches;
-use Ghispi\TreeTransform\Strategy\MinMatchesCursor;
 use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -23,11 +18,6 @@ use PHPUnit\Framework\TestCase;
  * Regressions for findings of the code review.
  */
 #[CoversClass(Rows::class)]
-#[CoversClass(NestedSetCursor::class)]
-#[CoversClass(MaterializedPathCursor::class)]
-#[CoversClass(AnnotateCursor::class)]
-#[CoversClass(MinMatchesCursor::class)]
-#[CoversClass(ActiveTrailCursor::class)]
 final class ReviewRegressionTest extends TestCase
 {
     /**

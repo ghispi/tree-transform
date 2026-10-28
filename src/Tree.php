@@ -7,6 +7,8 @@ namespace Ghispi\TreeTransform;
 use Ghispi\TreeTransform\Accessor\Accessor;
 use Ghispi\TreeTransform\Accessor\AutoAccessor;
 use Ghispi\TreeTransform\Cursor\Cursor;
+use Ghispi\TreeTransform\Internal\GeneratorCursor;
+use Ghispi\TreeTransform\Internal\Stream;
 use Ghispi\TreeTransform\Predicate\Ancestors;
 use Ghispi\TreeTransform\Predicate\Predicate;
 use Ghispi\TreeTransform\Sink\AdjacencyListSink;
@@ -261,31 +263,26 @@ final readonly class Tree implements \IteratorAggregate
      */
     public function cursor(): Cursor
     {
-        $cursor = $this->source->open();
-        foreach ($this->stages as $stage) {
-            $cursor = $stage->apply($cursor);
-        }
-
-        return $cursor;
+        return new GeneratorCursor($this->stream());
     }
 
     /**
      * Streams nodes in pre-order as depth => node (keys repeat). Memory: O(depth).
      *
-     * @return \Generator<int, mixed>
+     * Sending true instead of calling next() skips the subtree of the current node, which is then not read:
+     * $nodes->send(true) returns the next node after that subtree, like next() + current().
+     *
+     * @return \Generator<int, mixed, bool|null, mixed>
      */
     public function iterate(): \Generator
     {
-        $cursor = $this->cursor();
-        while ($cursor->next()) {
-            yield $cursor->depth() => $cursor->node();
-        }
+        yield from $this->stream();
     }
 
     /**
      * Same as iterate().
      *
-     * @return \Generator<int, mixed>
+     * @return \Generator<int, mixed, bool|null, mixed>
      */
     public function getIterator(): \Generator
     {
@@ -371,6 +368,21 @@ final readonly class Tree implements \IteratorAggregate
      */
     public function into(Sink $sink): mixed
     {
-        return $sink->consume($this->cursor());
+        return Stream::consume($sink, $this->stream());
+    }
+
+    /**
+     * Opens the source and applies all stages as one internal stream (see Stream).
+     *
+     * @return \Generator<int, mixed, bool|null, mixed>
+     */
+    private function stream(): \Generator
+    {
+        $stream = Stream::open($this->source);
+        foreach ($this->stages as $stage) {
+            $stream = Stream::apply($stage, $stream);
+        }
+
+        return $stream;
     }
 }

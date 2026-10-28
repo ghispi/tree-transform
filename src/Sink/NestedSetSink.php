@@ -6,6 +6,8 @@ namespace Ghispi\TreeTransform\Sink;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
+use Ghispi\TreeTransform\Internal\Stream;
+use Ghispi\TreeTransform\Internal\StreamSink;
 
 /**
  * Builds a flat list in pre-order with recomputed nested set values — e.g. to store a filtered or restructured
@@ -15,8 +17,9 @@ use Ghispi\TreeTransform\Exception\InvalidArgumentException;
  * fn (mixed $node, int $left, int $right, int $depth): mixed.
  *
  * @implements Sink<list<mixed>>
+ * @implements StreamSink<list<mixed>>
  */
-final readonly class NestedSetSink implements Sink
+final readonly class NestedSetSink implements Sink, StreamSink
 {
     /**
      * @param string|null                                    $levelField  null to leave the level out
@@ -39,6 +42,18 @@ final readonly class NestedSetSink implements Sink
      */
     public function consume(Cursor $cursor): array
     {
+        return $this->drain(Stream::of($cursor));
+    }
+
+    /**
+     * @internal
+     *
+     * @param \Generator<int, mixed, bool|null, mixed> $input
+     *
+     * @return list<mixed>
+     */
+    public function drain(\Generator $input): array
+    {
         /** @var list<mixed> $nodes */
         $nodes = [];
         /** @var list<int> $lefts */
@@ -52,8 +67,7 @@ final readonly class NestedSetSink implements Sink
         $top = -1;
         $counter = 0;
 
-        while ($cursor->next()) {
-            $depth = $cursor->depth();
+        foreach ($input as $depth => $node) {
             while ($top >= $depth) {
                 $rights[$open[$top--]] = ++$counter;
             }
@@ -61,7 +75,7 @@ final readonly class NestedSetSink implements Sink
                 $counter = 0;
             }
             $position = \count($nodes);
-            $nodes[] = $cursor->node();
+            $nodes[] = $node;
             $lefts[] = ++$counter;
             $rights[] = 0;
             $depths[] = $depth;

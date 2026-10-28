@@ -36,6 +36,14 @@ Rules every cursor must follow:
 - **Never mutate the input.** Copy array payloads before changing them; leave objects alone.
 - Keep hot loops iterative, and avoid creating an object per node.
 
+### How your code runs next to the built-ins
+
+Built-in sources, strategies, stages and sinks pass nodes to each other as internal generators instead of cursor
+objects (one resumption per node and stage instead of several method calls). Your implementations still see and
+return plain `Cursor`s: the pipeline wraps the stream in a cursor before your stage, and reads your cursor back
+into a stream after it. `skipSubtree()` calls on the wrapper reach the built-in source as before. Each adapter
+costs a few method calls per node, so a custom stage is a little slower than a built-in one, never incorrect.
+
 ## Source
 
 A `Source` has one method, `open(): Cursor`. Make it re-callable when the input is re-iterable. This one reads an

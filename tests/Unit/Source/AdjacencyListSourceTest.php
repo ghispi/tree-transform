@@ -8,7 +8,6 @@ use Ghispi\TreeTransform\Exception\CycleDetectedException;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
 use Ghispi\TreeTransform\Exception\OrphanNodeException;
-use Ghispi\TreeTransform\Source\AdjacencyListCursor;
 use Ghispi\TreeTransform\Source\AdjacencyListFields;
 use Ghispi\TreeTransform\Source\AdjacencyListSource;
 use Ghispi\TreeTransform\Source\OrphanPolicy;
@@ -22,7 +21,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(AdjacencyListSource::class)]
-#[CoversClass(AdjacencyListCursor::class)]
 #[CoversClass(AdjacencyListFields::class)]
 final class AdjacencyListSourceTest extends TestCase
 {

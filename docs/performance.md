@@ -191,11 +191,11 @@ uneven branching), **deep-10k** (a single chain 10,000 levels deep). Filters mat
 
 | Source | balanced-300k | category-100k | deep-10k | Own memory |
 |---|---|---|---|---|
-| Nested set | 80 ms (3.7M nodes/s) | 28 ms | 2.3 ms | 103 KiB |
-| Pre-ordered adjacency list | 99 ms (3.0M nodes/s) | 34 ms | 2.8 ms | 103 KiB |
-| Materialized path | 142 ms (2.1M nodes/s) | 43 ms | — | 103 KiB |
-| Nested arrays | 62 ms (4.8M nodes/s) | 30 ms | 2.7 ms | 64 KiB |
-| Adjacency list, any order | 121 ms (2.5M nodes/s) | 49 ms | 4.5 ms | 30 MiB (index) |
+| Nested set | 31 ms (9.8M nodes/s) | 11 ms | 0.9 ms | 105 KiB |
+| Pre-ordered adjacency list | 48 ms (6.2M nodes/s) | 17 ms | 1.2 ms | 105 KiB |
+| Materialized path | 85 ms (3.5M nodes/s) | 28 ms | — | 105 KiB |
+| Nested arrays | 35 ms (8.5M nodes/s) | 20 ms | 1.5 ms | 97 KiB |
+| Adjacency list, any order | 67 ms (4.5M nodes/s) | 27 ms | 2.1 ms | 35 MiB (index) |
 
 ### Filtering
 
@@ -203,13 +203,13 @@ Over a nested set array, into `count()`:
 
 | Strategy | balanced-300k | category-100k |
 |---|---|---|
-| none | 60 ms | 22 ms |
-| `Prune` (90% kept) | 76 ms | 28 ms |
-| `Prune` (10% kept — skipped subtrees are not read) | 22 ms | 7 ms |
-| `Promote` | 92 ms | 31 ms |
-| `KeepAncestors` | 104 ms | 34 ms |
-| `ActiveTrail` (one active node) | 123 ms | 44 ms |
-| `Annotate` | 217 ms | 74 ms |
+| none | 28 ms | 10 ms |
+| `Prune` (90% kept) | 39 ms | 16 ms |
+| `Prune` (10% kept — skipped subtrees are not read) | 10 ms | 3.5 ms |
+| `Promote` | 48 ms | 17 ms |
+| `KeepAncestors` | 51 ms | 19 ms |
+| `ActiveTrail` (one active node) | 66 ms | 26 ms |
+| `Annotate` | 133 ms | 44 ms |
 
 ### Streaming
 
@@ -217,9 +217,9 @@ Rows from a generator through a strategy into `iterate()`. Memory stays flat whi
 
 | Pipeline | 11k nodes | 111k nodes | 1.1M nodes | Peak memory |
 |---|---|---|---|---|
-| Nested set → `Prune` | 12 ms | 90 ms | 795 ms | 1.0 MiB at every size |
-| Nested set → `KeepAncestors` | 11 ms | 80 ms | 834 ms | 1.0 MiB at every size |
-| Materialized path (no filter) | 11 ms | 86 ms | 929 ms | 1.0 MiB at every size |
+| Nested set → `Prune` | 9 ms | 62 ms | 550 ms | 1.0 MiB at every size |
+| Nested set → `KeepAncestors` | 9 ms | 62 ms | 583 ms | 1.0 MiB at every size |
+| Materialized path (no filter) | 8.5 ms | 70 ms | 737 ms | 1.0 MiB at every size |
 
 ### Compared with building the whole tree first
 
@@ -228,15 +228,15 @@ output, `KeepAncestors` semantics:
 
 | Input, balanced-300k | Naive build-then-filter | This library |
 |---|---|---|
-| Nested set | 144 ms, 260 MiB | **122 ms, 45 MiB** |
-| Adjacency list, any order | **128 ms**, 251 MiB | 170 ms, **63 MiB** |
+| Nested set | 148 ms, 260 MiB | **76 ms, 45 MiB** |
+| Adjacency list, any order | 134 ms, 251 MiB | **121 ms, 63 MiB** |
 
 | Input, category-100k | Naive build-then-filter | This library |
 |---|---|---|
-| Nested set | 60 ms, 96 MiB | **44 ms, 18 MiB** |
-| Adjacency list, any order | **54 ms**, 93 MiB | 65 ms, **31 MiB** |
+| Nested set | 59 ms, 96 MiB | **26 ms, 18 MiB** |
+| Adjacency list, any order | 57 ms, 93 MiB | **45 ms, 31 MiB** |
 
-The library always uses far less memory: 3–6× less here, and constant memory when streaming. It is faster for
-inputs that arrive in tree order (nested set, materialized path, pre-ordered adjacency). For adjacency lists in
-arbitrary order it is somewhat slower, because it builds an index and checks for cycles before streaming — if you
-control the query, order it by a nested set left value or a path and use the pre-ordered source.
+The library always uses far less memory: 3–6× less here, and constant memory when streaming. It is about 2× faster
+for inputs that arrive in tree order (nested set, materialized path, pre-ordered adjacency), and slightly faster for
+adjacency lists in arbitrary order (about as fast as naive code for `Prune`), where it first builds an index (and checks for cycles when a child comes before
+its parent). If you control the query, order it by a nested set left value or a path and use the pre-ordered source.

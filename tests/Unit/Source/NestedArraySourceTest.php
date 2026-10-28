@@ -6,7 +6,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Source;
 
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
-use Ghispi\TreeTransform\Source\NestedArrayCursor;
 use Ghispi\TreeTransform\Source\NestedArraySource;
 use Ghispi\TreeTransform\Tests\Fixtures\CountingAccessor;
 use Ghispi\TreeTransform\Tests\Fixtures\Matrix;
@@ -19,7 +18,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(NestedArraySource::class)]
-#[CoversClass(NestedArrayCursor::class)]
 final class NestedArraySourceTest extends TestCase
 {
     public function testRunningExample(): void

@@ -6,7 +6,6 @@ namespace Ghispi\TreeTransform\Tests\Unit\Source;
 
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
-use Ghispi\TreeTransform\Source\DepthListCursor;
 use Ghispi\TreeTransform\Source\DepthListSource;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
 use Ghispi\TreeTransform\Tree;
@@ -15,7 +14,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(DepthListSource::class)]
-#[CoversClass(DepthListCursor::class)]
 final class DepthListSourceTest extends TestCase
 {
     /**

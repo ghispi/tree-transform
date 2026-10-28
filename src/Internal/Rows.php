@@ -49,15 +49,25 @@ final class Rows
     }
 
     /**
-     * The input itself when it is a list array, which cursors read by position: no copy, no iterator.
+     * Rows ready for foreach in a stream: arrays as they are (no copy), anything else as an Iterator. Called
+     * before the stream starts, so a reused generator fails when the source is opened.
      *
-     * @param iterable<mixed> $rows
+     * @template TKey
+     * @template T
      *
-     * @return list<mixed>|null
+     * @param iterable<TKey, T> $rows
+     *
+     * @return iterable<TKey, T>
      */
-    public static function list(iterable $rows): ?array
+    public static function each(iterable $rows): iterable
     {
-        return \is_array($rows) && array_is_list($rows) ? $rows : null;
+        if (\is_array($rows)) {
+            return $rows;
+        }
+        $iterator = self::iterator($rows);
+
+        // An empty generator is finished by its rewind, and foreach refuses finished generators.
+        return $iterator instanceof \Generator && !$iterator->valid() ? [] : $iterator;
     }
 
     /**
