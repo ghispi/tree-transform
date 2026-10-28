@@ -32,6 +32,9 @@ final class MaterializedPathCursor implements Cursor
 
     private ?string $skipPrefix = null;
 
+    /** Segment count of the first root; every root must have it unless gaps are allowed (ordering check). */
+    private int $rootSegments = 0;
+
     /**
      * @param \Iterator<mixed>       $rows
      * @param \Closure(mixed): mixed $path
@@ -62,7 +65,13 @@ final class MaterializedPathCursor implements Cursor
             if (!\is_string($raw) && !\is_int($raw)) {
                 throw InvalidTreeException::at(null, \sprintf('path field "%s" must be a string, got %s.', $this->fields->path, get_debug_type($raw)));
             }
-            $path = trim((string) $raw, $sep);
+            $path = (string) $raw;
+            if (str_starts_with($path, $sep)) {
+                $path = substr($path, \strlen($sep));
+            }
+            if (str_ends_with($path, $sep)) {
+                $path = substr($path, 0, -\strlen($sep));
+            }
             if ($path === '') {
                 throw InvalidTreeException::at(null, 'empty path.');
             }
@@ -79,6 +88,15 @@ final class MaterializedPathCursor implements Cursor
                 --$this->openCount;
             }
             $segments = substr_count($key, $sep);
+            if ($this->openCount === 0 && !$this->allowGaps) {
+                // Roots of one read share a level. A deeper "root" is a row whose ancestors came earlier and were
+                // closed by misordered rows — typically a collation that ignores the separator.
+                if ($this->rootSegments === 0) {
+                    $this->rootSegments = $segments;
+                } elseif ($segments !== $this->rootSegments) {
+                    throw InvalidTreeException::at($raw, 'rows are not in tree order: it is not below the open rows, and not at the level of the first root. Order by path with a binary collation, e.g. COLLATE "C" or utf8mb4_bin.');
+                }
+            }
             if ($this->openCount > 0) {
                 $parentSegments = $this->segments[$this->openCount - 1];
                 if ($segments <= $parentSegments) {

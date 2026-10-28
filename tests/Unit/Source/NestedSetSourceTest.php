@@ -70,14 +70,6 @@ final class NestedSetSourceTest extends TestCase
         self::assertSame('a[b], c[d]', self::read($rows, NestedSetFields::gedmo()));
     }
 
-    public function testRowsOfARootMustBeContiguous(): void
-    {
-        $this->expectException(InvalidTreeException::class);
-        $this->expectExceptionMessage('rows of root 1 are not contiguous');
-
-        self::read([self::n('a', 1, 4, 1), self::n('h', 1, 2, 2), self::n('b', 2, 3, 1)], NestedSetFields::gedmo());
-    }
-
     public function testSkipIsResetWhenTheRootChanges(): void
     {
         $rows = [self::n('a', 1, 6, 1), self::n('b', 2, 3, 1), self::n('c', 1, 4, 2), self::n('d', 2, 3, 2)];

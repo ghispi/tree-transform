@@ -78,6 +78,7 @@ final class GedmoTree
         $anchor = $root === null ? null : $this->anchor($config, $root);
 
         $orphans = OrphanPolicy::Throw;
+        $rootParent = null;
         switch ($config->strategy) {
             case TreeConfig::NESTED:
                 if ($anchor !== null) {
@@ -89,8 +90,15 @@ final class GedmoTree
                 break;
             case TreeConfig::MATERIALIZED_PATH:
                 if ($anchor !== null) {
-                    $qb->andWhere(\sprintf('%s.%s LIKE :tt_path', self::ALIAS, $config->path))
-                        ->setParameter('tt_path', addcslashes($anchor['path'], '%_') . '%');
+                    // Descendants start with the anchor's path followed by the separator; "!" escapes LIKE wildcards
+                    // portably (no reliance on a database's default escape character).
+                    $prefix = $anchor['path'];
+                    if (!$config->pathEndsWithSeparator) {
+                        $prefix .= $config->pathSeparator;
+                    }
+                    $qb->andWhere(\sprintf("(%1\$s.%2\$s = :tt_exact OR %1\$s.%2\$s LIKE :tt_path ESCAPE '!')", self::ALIAS, $config->path))
+                        ->setParameter('tt_exact', $anchor['path'])
+                        ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
                 }
                 break;
             case TreeConfig::CLOSURE:
@@ -101,11 +109,13 @@ final class GedmoTree
                     if ($maxDepth !== null) {
                         $qb->andWhere('tt_c.depth <= :tt_depth')->setParameter('tt_depth', $maxDepth);
                     }
-                    $orphans = OrphanPolicy::AsRoot; // the subtree root's parent is outside the result
+                    // The subtree root's parent is outside the result: its parent value marks the root.
+                    $rootParent = $anchor['parent'];
                 }
                 break;
         }
-        if ($maxDepth !== null && $config->level !== null && $config->strategy !== TreeConfig::CLOSURE) {
+        // With $modify, removed rows shift depths, so depth is only applied in PHP to keep one meaning of maxDepth.
+        if ($maxDepth !== null && $modify === null && $config->level !== null && $config->strategy !== TreeConfig::CLOSURE) {
             $qb->andWhere(\sprintf('%s.%s <= :tt_level', self::ALIAS, $config->level))
                 ->setParameter('tt_level', ($anchor['level'] ?? $this->minLevel($config)) + $maxDepth);
         }
@@ -116,7 +126,7 @@ final class GedmoTree
             }
         }
 
-        $tree = Tree::from($this->source($config, $qb, $hydration, $orphans, $modify !== null))->map(self::unwrap($config, $hydration));
+        $tree = Tree::from($this->source($config, $qb, $hydration, $orphans, $modify !== null, $rootParent))->map(self::unwrap($config, $hydration));
 
         return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
     }
@@ -206,6 +216,9 @@ final class GedmoTree
         if ($config->parent !== null) {
             $qb->addSelect(\sprintf('IDENTITY(%s.%s) AS tt_parent', $a, $config->parent));
         }
+        if ($config->root !== null) {
+            $qb->addSelect(\sprintf('%s AS tt_root', $this->rootExpression($config, $a)));
+        }
 
         switch ($config->strategy) {
             case TreeConfig::NESTED:
@@ -214,7 +227,7 @@ final class GedmoTree
                 }
                 $qb->addSelect(\sprintf('%s.%s AS tt_left, %1$s.%3$s AS tt_right', $a, $config->left, $config->right));
                 if ($config->root !== null) {
-                    $qb->addSelect(\sprintf('%s AS tt_root', $this->rootExpression($config, $a)))->addOrderBy('tt_root');
+                    $qb->addOrderBy('tt_root');
                 }
                 $qb->addOrderBy(\sprintf('%s.%s', $a, $config->left));
                 break;
@@ -240,20 +253,20 @@ final class GedmoTree
     /**
      * The query runs each time the tree is read, so one Tree can produce several outputs.
      */
-    private function source(TreeConfig $config, QueryBuilder $qb, Hydration $hydration, OrphanPolicy $orphans, bool $allowGaps = false): Source
+    private function source(TreeConfig $config, QueryBuilder $qb, Hydration $hydration, OrphanPolicy $orphans, bool $allowGaps = false, int|string|null $rootParent = null): Source
     {
         $query = $qb->getQuery();
 
         return new LazySource(fn(): Source => $this->sourceFor($config, $query->toIterable(
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
-        ), $orphans, $allowGaps));
+        ), $orphans, $allowGaps, $rootParent));
     }
 
     /**
      * @param iterable<mixed> $rows
      */
-    private function sourceFor(TreeConfig $config, iterable $rows, OrphanPolicy $orphans, bool $allowGaps): Source
+    private function sourceFor(TreeConfig $config, iterable $rows, OrphanPolicy $orphans, bool $allowGaps, int|string|null $rootParent): Source
     {
         $accessor = new ArrayKeyAccessor();
 
@@ -274,6 +287,7 @@ final class GedmoTree
                 new AdjacencyListFields('tt_id', 'tt_parent'),
                 $accessor,
                 $orphans,
+                $rootParent,
             ),
         };
     }
@@ -321,7 +335,7 @@ final class GedmoTree
     /**
      * Reads the structural values of one node (entity or id).
      *
-     * @return array{id: int|string, left: int, right: int, level: int, root: mixed, path: string}
+     * @return array{id: int|string, left: int, right: int, level: int, root: mixed, path: string, parent: int|string|null}
      */
     private function anchor(TreeConfig $config, object|int|string $node): array
     {
@@ -343,6 +357,9 @@ final class GedmoTree
         if ($config->path !== null) {
             $qb->addSelect(\sprintf('%s.%s AS path', $a, $config->path));
         }
+        if ($config->parent !== null) {
+            $qb->addSelect(\sprintf('IDENTITY(%s.%s) AS parent', $a, $config->parent));
+        }
         /** @var list<array<string, mixed>> $result */
         $result = $qb->getQuery()->getArrayResult();
         if ($result === []) {
@@ -363,6 +380,7 @@ final class GedmoTree
             'level' => $int($row['lvl'] ?? 0),
             'root' => $row['root'] ?? null,
             'path' => \is_string($row['path'] ?? null) ? $row['path'] : '',
+            'parent' => \is_int($row['parent'] ?? null) || \is_string($row['parent'] ?? null) ? $row['parent'] : null,
         ];
     }
 

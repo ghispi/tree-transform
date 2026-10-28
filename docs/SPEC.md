@@ -162,12 +162,13 @@ Details:
 - **Cycles** (adjacency): nodes unreachable from any root are reported; default throws `CycleDetected`.
 - **Sibling order**: input order by default; adjacency source accepts an optional sort field.
 - **Materialized path**: a row that is not below any open row starts a new root, so a subtree (common prefix) can
-  be read alone. Below a root a missing parent throws, unless `allowGaps: true` attaches the row to its nearest
+  be read alone. All roots of one read must be at the same path level (O(1) check that catches rows misordered
+  by a punctuation-ignoring collation); `allowGaps` lifts it. Below a root a missing parent throws, unless `allowGaps: true` attaches the row to its nearest
   present ancestor. With every path ending in the separator, byte-wise ordering always yields pre-order; the real
   risk is locale/ICU collations that ignore punctuation — the docs recommend binary collation (`COLLATE "C"`,
   `utf8mb4_bin`). Ordering violations below a root are detected.
 - **Validation** is always on and cheap: integer `lft`/`rgt`, `lft < rgt`, increasing `lft`, child intervals inside
-  the parent, rows of each root contiguous; depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
+  the parent (rows of one root must be grouped together; that is not checked, to keep memory O(depth)); depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
   exceptions implementing `Ghispi\TreeTransform\Exception\TreeTransformException`.
 
 ## 5. Filter strategies
@@ -175,7 +176,8 @@ Details:
 A strategy decides what to do with a node based on the predicate result. Two orthogonal axes:
 
 1. **Non-match behaviour** — the strategy class.
-2. **Match behaviour for descendants** — `OnMatch` option accepted by every built-in strategy:
+2. **Match behaviour for descendants** — `OnMatch` option of `Prune`, `KeepAncestors`, `Promote` and `Placeholder`
+   (`ActiveTrail`, `Annotate` and `MinMatches` define descendants' fate themselves):
    - `OnMatch::EvaluateDescendants` (default) — descendants are tested normally.
    - `OnMatch::KeepDescendants` — a match keeps its whole subtree untested (cheaper; "show folder contents").
    - `OnMatch::DropDescendants` — a match is kept but its descendants are not (first match per branch).

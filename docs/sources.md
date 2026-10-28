@@ -327,10 +327,12 @@ How rows are attached:
 
 - A row that is not below any open row starts a new root. So a subtree read by prefix
   (`WHERE path LIKE '/blog/%'`) works on its own.
+- All roots of one read are at the same path level. A "root" at a different level means the rows are out of order
+  (see the ordering gotcha below) and throws `InvalidTreeException`.
 - Below a root, every row's parent path must come before it. A missing parent throws `InvalidTreeException`,
   and so does a duplicate path.
 - With `allowGaps: true`, a row whose parent is missing attaches to its nearest present ancestor, as if the missing
-  rows had been removed with [`Promote`](strategies.md#promote).
+  rows had been removed with [`Promote`](strategies.md#promote), and roots may be at different levels.
 
 Depth comes from the open path prefixes, so no level column is needed. `skipSubtree()` skips rows by path prefix.
 Memory: O(depth).
@@ -578,7 +580,7 @@ Every exception the library throws implements `Ghispi\TreeTransform\Exception\Tr
 
 | Exception | When |
 |---|---|
-| `InvalidTreeException` | The input is not a valid tree: bad ordering, overlapping intervals, rows of one root split up, missing parent path, non-integer `lft`, bad depth sequence, duplicate id |
+| `InvalidTreeException` | The input is not a valid tree: bad ordering, overlapping intervals, missing parent path, non-integer `lft`, bad depth sequence, duplicate id |
 | `OrphanNodeException` (extends `InvalidTreeException`) | Adjacency list: a parent id does not exist (with `OrphanPolicy::Throw`) |
 | `CycleDetectedException` (extends `InvalidTreeException`) | Adjacency list: nodes not reachable from any root |
 | `InvalidArgumentException` | A component got an invalid option, e.g. `new MaxDepth(-1)` |

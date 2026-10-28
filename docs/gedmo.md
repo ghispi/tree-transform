@@ -37,7 +37,7 @@ Options:
 | Option | Default | Effect |
 |---|---|---|
 | `root` | `null` | Entity or id. Only its subtree is loaded, with that node as the only root. |
-| `maxDepth` | `null` | Levels below the root(s) to load; `0` loads only the root(s). Uses the level column in SQL when the entity has one. |
+| `maxDepth` | `null` | Levels below the root(s) to load; `0` loads only the root(s). Uses the level column in SQL when the entity has one (not together with `modify`, because removed rows shift depths; depth then counts the tree as built). |
 | `hydration` | `Hydration::Arrays` | `Hydration::Entities` returns managed entities instead of arrays. |
 | `modify` | `null` | `fn (QueryBuilder $qb, string $alias)` to add your own conditions or joins. |
 

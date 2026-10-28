@@ -50,6 +50,11 @@ final class AnnotateCursor implements Cursor
 
     private int $skipBelow = -1;
 
+    /** Queue position of the input's current node, and of the last emitted entry (to forward skips). */
+    private int $inputPosition = -1;
+
+    private int $emittedPosition = -2;
+
     /**
      * @param \Closure(mixed, MatchState): mixed $combine
      */
@@ -79,6 +84,7 @@ final class AnnotateCursor implements Cursor
                 }
                 $this->node = ($this->combine)($node, $state);
                 $this->depth = $depth;
+                $this->emittedPosition = $position;
 
                 return true;
             }
@@ -110,6 +116,11 @@ final class AnnotateCursor implements Cursor
     public function skipSubtree(): void
     {
         $this->skipBelow = $this->depth;
+        // The emitted node is the input's current node: its state and its ancestors' are decided, so the input
+        // can skip its subtree too instead of reading and testing every descendant.
+        if ($this->emittedPosition === $this->inputPosition && !$this->exhausted) {
+            $this->input->skipSubtree();
+        }
     }
 
     private function visit(mixed $node, int $depth): void
@@ -120,6 +131,7 @@ final class AnnotateCursor implements Cursor
         $matches = $this->predicate->matches($node, $depth, $this->ancestors);
 
         $position = $this->tail++;
+        $this->inputPosition = $position;
         $this->queueNodes[$position] = $node;
         $this->queueDepths[$position] = $depth;
         $this->queueStates[$position] = $matches ? MatchState::Match : null;

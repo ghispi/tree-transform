@@ -51,6 +51,11 @@ final class MinMatchesCursor implements Cursor
 
     private int $skipBelow = -1;
 
+    /** Queue position of the input's current node, and of the last emitted entry (to forward skips). */
+    private int $inputPosition = -1;
+
+    private int $emittedPosition = -2;
+
     public function __construct(
         private readonly Cursor $input,
         private readonly Predicate $predicate,
@@ -79,6 +84,7 @@ final class MinMatchesCursor implements Cursor
                 }
                 $this->node = $node;
                 $this->depth = $depth;
+                $this->emittedPosition = $position;
 
                 return true;
             }
@@ -110,6 +116,11 @@ final class MinMatchesCursor implements Cursor
     public function skipSubtree(): void
     {
         $this->skipBelow = $this->depth;
+        // The emitted node is the input's current node: its state and its ancestors' are decided, so the input
+        // can skip its subtree too instead of reading and testing every descendant.
+        if ($this->emittedPosition === $this->inputPosition && !$this->exhausted) {
+            $this->input->skipSubtree();
+        }
     }
 
     private function visit(mixed $node, int $depth): void
@@ -117,6 +128,7 @@ final class MinMatchesCursor implements Cursor
         $this->close($depth);
 
         $position = $this->tail++;
+        $this->inputPosition = $position;
         $this->queueNodes[$position] = $node;
         $this->queueDepths[$position] = $depth;
         $this->queueStates[$position] = self::UNDECIDED;

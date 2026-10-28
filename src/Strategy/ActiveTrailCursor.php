@@ -52,6 +52,11 @@ final class ActiveTrailCursor implements Cursor
 
     private int $skipBelow = -1;
 
+    /** Queue position of the input's current node, and of the last emitted entry (to forward skips). */
+    private int $inputPosition = -1;
+
+    private int $emittedPosition = -2;
+
     public function __construct(
         private readonly Cursor $input,
         private readonly Predicate $predicate,
@@ -66,10 +71,10 @@ final class ActiveTrailCursor implements Cursor
     {
         while (true) {
             while ($this->head < $this->tail) {
-                $depth = $this->queueDepths[$this->head];
-                $node = $this->queueNodes[$this->head];
-                unset($this->queueNodes[$this->head], $this->queueDepths[$this->head]);
-                ++$this->head;
+                $position = $this->head++;
+                $depth = $this->queueDepths[$position];
+                $node = $this->queueNodes[$position];
+                unset($this->queueNodes[$position], $this->queueDepths[$position]);
                 if ($this->skipBelow >= 0) {
                     if ($depth > $this->skipBelow) {
                         continue;
@@ -78,6 +83,7 @@ final class ActiveTrailCursor implements Cursor
                 }
                 $this->node = $node;
                 $this->depth = $depth;
+                $this->emittedPosition = $position;
 
                 return true;
             }
@@ -103,6 +109,11 @@ final class ActiveTrailCursor implements Cursor
     public function skipSubtree(): void
     {
         $this->skipBelow = $this->depth;
+        // Once the single active node is found, the trail is fixed: skipping the current input node's subtree only
+        // removes descendants the consumer does not want. Before that, the subtree could hold the active node.
+        if ($this->found && !$this->multiple && $this->emittedPosition === $this->inputPosition) {
+            $this->input->skipSubtree();
+        }
     }
 
     private function visit(mixed $node, int $depth): void
@@ -118,9 +129,11 @@ final class ActiveTrailCursor implements Cursor
             --$this->activeCount;
         }
 
+        $this->inputPosition = -1;
         $nearActive = $this->activeCount > 0
             && $depth - $this->active[$this->activeCount - 1] <= $this->activeChildrenDepth;
         if ($nearActive || ($this->siblings && ($depth === 0 || $depth - 1 < $this->trail))) {
+            $this->inputPosition = $this->tail;
             $this->enqueue($node, $depth);
             $this->emitted[$depth] = true;
         } else {

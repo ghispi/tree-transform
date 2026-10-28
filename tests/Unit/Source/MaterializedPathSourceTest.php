@@ -86,7 +86,21 @@ final class MaterializedPathSourceTest extends TestCase
     {
         // A subtree query: the top row's ancestors are not in the result.
         self::assertSame('4[7, 8[9]]', self::read(['1,4,', '1,4,7,', '1,4,8,', '1,4,8,9,']));
-        self::assertSame('1, 3[5]', self::read(['1,', '2,3,', '2,3,5,']));
+        self::assertSame('1, 3[5]', self::read(['1,', '2,3,', '2,3,5,'], allowGaps: true));
+    }
+
+    public function testRootsAtDifferentLevelsMeanMisorderedRows(): void
+    {
+        // What a collation that ignores the separator produces: "1,2," sorted after "10,".
+        $this->expectException(InvalidTreeException::class);
+        $this->expectExceptionMessage("'1,2,': rows are not in tree order");
+
+        self::read(['1,', '10,', '1,2,', '1,3,']);
+    }
+
+    public function testSiblingsNeedNotBeInByteOrder(): void
+    {
+        self::assertSame('0[9, 10[11]]', self::read(['0,', '0,9,', '0,10,', '0,10,11,']));
     }
 
     public function testMissingParentBelowARootThrows(): void

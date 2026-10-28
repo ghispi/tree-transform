@@ -34,6 +34,7 @@ final readonly class TreeConfig
         public ?string $level = null,
         public ?string $path = null,
         public string $pathSeparator = ',',
+        public bool $pathEndsWithSeparator = true,
         public ?string $closureClass = null,
     ) {}
 
@@ -65,6 +66,7 @@ final readonly class TreeConfig
             level: $string('level'),
             path: $string('path'),
             pathSeparator: $string('path_separator') ?? ',',
+            pathEndsWithSeparator: ($config['path_ends_with_separator'] ?? true) !== false,
             closureClass: $closure,
         );
     }

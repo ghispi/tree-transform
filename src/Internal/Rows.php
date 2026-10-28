@@ -26,9 +26,16 @@ final class Rows
         if ($rows instanceof \Generator) {
             try {
                 $rows->rewind();
-            } catch (\Exception) {
+            } catch (\Exception $e) {
+                // Only PHP's own "already run/closed" errors mean reuse; anything else comes from the generator.
+                if ($e::class !== \Exception::class || preg_match('/already (run|closed)/', $e->getMessage()) !== 1) {
+                    throw $e;
+                }
+
                 throw new \Ghispi\TreeTransform\Exception\LogicException(
                     'This source reads a generator, which can only be traversed once. Use Tree::lazy() or LazySource to read it again.',
+                    0,
+                    $e,
                 );
             }
 
@@ -91,7 +98,7 @@ final class Rows
         if (\is_int($value)) {
             return $value;
         }
-        if (\is_string($value) && is_numeric($value)) {
+        if (\is_string($value) && preg_match('/^-?[0-9]+$/', $value) === 1) {
             return (int) $value;
         }
 
