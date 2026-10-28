@@ -11,7 +11,8 @@ docs/SPEC.md is the design reference). Do not edit `src/`: report code/doc misma
 
 Process:
 1. Write or change the example in `examples/<topic>-<feature>.php` first: self-contained, realistic data (shop
-   categories, site pages), helpers from `examples/support/` for tree printing.
+   categories, site pages). Shared helpers: `examples/support/print-tree.php` (ASCII tree), `letters.php` (the
+   A..I running example), `shop.php` (shop categories). Only `examples/*.php` are run as examples.
 2. Embed it in the page with `<!-- example: <name> -->` … `<!-- /example -->` markers (add ` no-output` to show only
    the code). Never paste code/output by hand.
 3. Run `make docs` (regenerates every `examples/*.out` and every embedded block), then **read the regenerated
@@ -20,6 +21,8 @@ Process:
    effect), memory/performance notes, gotchas, links. Strategies get ASCII input/output trees on the A..I running
    example. Plain, direct tone; short sentences.
 5. `CHANGELOG.md` entry under `[Unreleased]` for user-visible changes.
+   `docs/SPEC.md` (design reference) and `docs/gedmo.md` (hand-written, backed by `tests/Integration`) are not
+   generated from examples; change them only when asked and keep claims backed by a test.
 6. Verify via Docker only: `docker compose run --rm php vendor/bin/phpunit --testsuite docs` (examples and
    doc-sync checks) and `make cs`.
 

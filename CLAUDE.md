@@ -26,7 +26,8 @@ designing or changing behaviour; update it when behaviour changes.**
 
 - Agents (`.claude/agents`): `tree-semantics-reviewer` (opus), `test-engineer`, `perf-engineer`, `docs-writer`
   (sonnet).
-- Skills (`.claude/skills`): `run-checks`, `add-strategy`, `add-source`, `write-docs`, `release`.
+- Skills (`.claude/skills`): `run-checks`, `add-strategy`, `add-source`, `write-docs`, `gedmo-bridge`,
+  `ci-status`, `release`.
 - `make docs` regenerates example outputs and the example blocks embedded in the docs.
 
 ## GitHub

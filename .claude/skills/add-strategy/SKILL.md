@@ -1,24 +1,26 @@
 ---
 name: add-strategy
-description: Checklist for adding or changing a filter strategy (FilterStrategy) or a cursor Stage in tree-transform — spec entry, streaming implementation, reference oracle, differential and unit tests, benchmark, docs. Use whenever a new strategy/stage is requested or an existing one changes behaviour.
+description: Checklist for adding or changing a filter strategy (FilterStrategy) or a cursor Stage in tree-transform — spec entry, streaming implementation with compiled predicates and skip forwarding, reference oracle, differential and unit tests, benchmark, docs. Use whenever a new strategy/stage is requested or an existing one changes behaviour.
 ---
 
-# Add a filter strategy or stage
+# Add or change a filter strategy or stage
 
-1. **Spec first.** Add or update the row in `docs/SPEC.md` §5 (strategy) or §6 (stage): rule, result on the running
-   example, memory bound, interaction with every `OnMatch` mode. Agree semantics before coding if ambiguous.
-2. **Implement** in `src/Strategy/<Name>.php` (implements `FilterStrategy`) or `src/Stage/<Name>.php`
-   (implements `Stage`). It returns a `Cursor` decorator; keep state as int stacks / payload references.
-   - Call the predicate at most once per node; call `skipSubtree()` on the input whenever the subtree's output is
-     already decided, so sources can skip work.
-   - Accept `OnMatch` in the constructor if it makes sense; document if it does not.
-   - `final`, no recursion, no per-node allocation.
-3. **Oracle.** Add the naive recursive equivalent to `tests/Fixtures/Oracle` — obvious code, no optimisation.
-4. **Tests.**
-   - Unit: running example from the spec for every `OnMatch` mode, plus edge cases (empty, forest, deep chain,
-     wide node, multi-level depth drop).
-   - Differential: register the strategy in the differential matrix so it runs against all sources and random seeds.
-5. **Facade.** Expose it in `Tree` only if it is common; otherwise usable via `filter($p, new Name())`.
-6. **Benchmark** subject in `benchmarks/` if it is on a hot path.
-7. **Verify** with the `run-checks` skill, then ask the `tree-semantics-reviewer` agent to review.
-8. docs and a tested example via the `write-docs` skill (incl. `CHANGELOG.md` entry) under Unreleased.
+1. **Spec first.** Add/update `docs/SPEC.md` §5 (strategy) or §6 (stage): rule, result on the A..I running example,
+   memory bound, and whether it takes `OnMatch` (Prune, KeepAncestors, Promote and Placeholder do; strategies that
+   define descendants' fate themselves don't). Settle ambiguous semantics before coding.
+2. **Implement** `src/Strategy/<Name>.php` (`FilterStrategy`, readonly config) + `<Name>Cursor.php` (`@internal`),
+   or `src/Stage/<Name>.php` + cursor:
+   - Predicates: `CompiledPredicate::of($predicate)` in the constructor; call `($this->test)($node, $depth, $ancestors)`
+     and cast with `(bool)`; call `$this->ancestors->enter($node, $depth)` only when `needsAncestors` is true.
+     At most one predicate call per node, none inside a subtree whose fate is known.
+   - Call `skipSubtree()` on the input as soon as a whole subtree's output is decided.
+   - Downstream `skipSubtree()`: drop buffered output below that depth (`skipBelow`), and forward to the input
+     only when the skipped node is the input's current node and skipping cannot change any other output.
+   - State as int stacks / parallel arrays (no per-node objects); unset queue entries as they are emitted.
+   - `final`, no recursion. Docblock with an ASCII before/after on the running example and the memory bound.
+3. **Oracle.** Add the naive recursive version to `tests/Fixtures/Oracle/Oracle.php` first.
+4. **Tests.** Unit: running example for every supported `OnMatch` mode and the edge cases; skip forwarding with
+   `SpyCursor`. Differential: register it in the strategy/stage oracle tests and the chained-pipeline test.
+5. **Facade.** A `Tree` method only for common cases; otherwise `filter($p, new Name())` / `pipe(new Name())`.
+6. **Finish.** Benchmark subject in `benchmarks/StrategyBench.php` if on a hot path; `run-checks`; a
+   `tree-semantics-reviewer` pass; docs and a tested example via `write-docs` (incl. `CHANGELOG.md`).

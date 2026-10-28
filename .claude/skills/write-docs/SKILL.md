@@ -24,5 +24,8 @@ A feature is not done until it is documented with a tested example (`docs/SPEC.m
 4. **Docblocks** on every public class, method and option: one-line summary, PHPStan types, `@throws`.
 5. **README**: update the feature list / quick example only for headline features.
 6. **CHANGELOG.md**: entry under `[Unreleased]`.
-7. **Verify**: `make ci` (includes the docs suite). For larger docs work, delegate to the `docs-writer` agent. Keep the tone plain and direct; prefer short sentences and
-   concrete examples over adjectives.
+7. **Verify**: `make ci` (includes the docs suite). For larger docs work, delegate to the `docs-writer` agent.
+   Keep the tone plain and direct; prefer short sentences and concrete examples over adjectives.
+
+`docs/SPEC.md` and `docs/gedmo.md` are hand-written (not synced from examples); `docs/gedmo.md` claims are backed by
+`tests/Integration`.
