@@ -403,7 +403,7 @@ final class Oracle
                 $trail[$node] = true;
                 $any = true;
             }
-            if ($active->contains($node)) {
+            if ($active->offsetExists($node)) {
                 $any = true;
             }
         }
@@ -430,11 +430,11 @@ final class Oracle
     ): array {
         $out = [];
         foreach ($nodes as $node) {
-            $distance = $active->contains($node) ? 0 : ($parentDistance === null ? null : $parentDistance + 1);
+            $distance = $active->offsetExists($node) ? 0 : ($parentDistance === null ? null : $parentDistance + 1);
             $near = $distance !== null && $distance <= $activeChildrenDepth;
             $keep = $siblings
                 ? ($depth === 0 || $parentOnTrail || $near)
-                : ($trail->contains($node) || $near);
+                : ($trail->offsetExists($node) || $near);
             if (!$keep) {
                 continue;
             }
@@ -442,7 +442,7 @@ final class Oracle
                 $node->children,
                 $depth + 1,
                 $distance,
-                $trail->contains($node),
+                $trail->offsetExists($node),
                 $active,
                 $trail,
                 $siblings,
