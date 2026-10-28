@@ -5,7 +5,7 @@ straight from Doctrine ORM and returns a regular [`Tree`](index.md), so every st
 on it. It knows each Gedmo strategy's columns and ordering, streams the rows, and pushes structural limits
 (subtree, depth, active trail) into SQL so fewer rows are loaded.
 
-Supported: `doctrine/orm` 3, `gedmo/doctrine-extensions` 3, with the `nested`, `closure` and `materializedPath`
+Supported: `doctrine/orm` 3.6+, `gedmo/doctrine-extensions` 3.20+, with the `nested`, `closure` and `materializedPath`
 tree types. Both packages are optional dependencies of this library; install them in your application.
 
 ## Setup

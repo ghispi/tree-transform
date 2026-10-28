@@ -9,7 +9,7 @@ use Ghispi\TreeTransform\Cursor\Cursor;
 /**
  * Consumes a cursor and builds a result.
  *
- * @template TResult
+ * @template-covariant TResult
  */
 interface Sink
 {

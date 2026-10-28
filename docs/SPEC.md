@@ -373,7 +373,7 @@ The facade is sugar only; every piece is usable standalone.
 - **Closure strategy**: queried via the entity's `parent` + `level` and served through the adjacency or pre-ordered
   adjacency source (closure tables do not give pre-order on their own).
 - **Output compatibility**: `__children` preset to match `buildTree()` output.
-- Supported: `doctrine/orm ^3`, `gedmo/doctrine-extensions ^3`. ODM MaterializedPath works via the generic sources.
+- Supported: `doctrine/orm ^3.6` (streams mixed entity/scalar results), `gedmo/doctrine-extensions ^3.20`. ODM MaterializedPath works via the generic sources.
 
 **Packaging (decided):** the bridge ships in this package for v0.x. Doctrine and Gedmo are `suggest` + dev
 dependencies only; bridge classes are inert unless used, and `conflict` rules exclude unsupported major versions.
