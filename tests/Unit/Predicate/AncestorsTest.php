@@ -99,6 +99,16 @@ final class AncestorsTest extends TestCase
         self::assertFalse(self::at('A', 'B', 'C')->some(static fn(mixed $n): bool => $n === 'C'));
     }
 
+    public function testSomeAndEveryIncludeTheRoot(): void
+    {
+        $a = self::at('A', 'B', 'C');
+
+        self::assertTrue($a->some(static fn(mixed $n): bool => $n === 'A'));
+        self::assertFalse($a->every(static fn(mixed $n): bool => $n !== 'A'));
+        self::assertTrue(self::at('A', 'B')->some(static fn(mixed $n): bool => $n === 'A'), 'only ancestor is the root');
+        self::assertFalse(self::at('A', 'B')->every(static fn(mixed $n): bool => false), 'only ancestor is the root');
+    }
+
     public function testSpecExampleHidesEverythingBelowAnUnpublishedSection(): void
     {
         $published = static fn(mixed $n): bool => Field::id($n) !== 'B';

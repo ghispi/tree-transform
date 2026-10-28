@@ -36,6 +36,14 @@ final class NestedArraySinkTest extends TestCase
         ], Tree::from(DepthListSource::pairs(self::pairs()))->toNestedArray());
     }
 
+    public function testSinkDefaultsKeepEmptyChildren(): void
+    {
+        self::assertSame(
+            [['id' => 'a', 'children' => [['id' => 'b', 'children' => []]]]],
+            new NestedArraySink()->consume(DepthListSource::pairs([[0, ['id' => 'a']], [1, ['id' => 'b']]])->open()),
+        );
+    }
+
     public function testCustomChildrenKeyAndOmitEmptyChildren(): void
     {
         self::assertSame([

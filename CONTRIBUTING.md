@@ -17,7 +17,7 @@ Use another PHP version with `PHP_VERSION=8.5 make build install ci`.
 ## Pull requests
 
 - One topic per pull request, with tests.
-- `make ci` must pass. For changes in `src/`, also run `make infection` (mutation testing) and, for anything on
+- `make ci` must pass. For changes in `src/`, also run `make infection` (mutation testing, MSI ≥ 95%) and, for anything on
   a hot path (sources, strategies, sinks), `make bench`.
 - Behaviour changes need documentation in the same pull request: the relevant page in `docs/`, and a runnable
   example in `examples/` with its expected output in a `.out` file (checked by the `docs` test suite).

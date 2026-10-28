@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Unit\Predicate;
 
+use Ghispi\TreeTransform\Accessor\Accessor;
 use Ghispi\TreeTransform\Accessor\GetterAccessor;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Predicate\Ancestors;
@@ -27,12 +28,38 @@ final class FieldPredicatesTest extends TestCase
         return $p->matches($node, $depth, new Ancestors());
     }
 
+    /**
+     * Accessor that reads "$field.custom" instead of "$field", so it is observable whether it was used.
+     */
+    private static function suffixAccessor(): Accessor
+    {
+        return new class implements Accessor {
+            public function reader(string $field): \Closure
+            {
+                return static fn(mixed $node): mixed => \is_array($node) ? $node[$field . '.custom'] ?? null : null;
+            }
+        };
+    }
+
     public function testDepthRangeIsInclusive(): void
     {
         $p = new DepthRange(1, 2);
 
         self::assertSame([false, true, true, false], array_map(static fn(int $d): bool => self::test($p, null, $d), [0, 1, 2, 3]));
         self::assertTrue(self::test(new DepthRange(), null, 1000));
+    }
+
+    public function testDepthRangeDefaultsToEveryDepthFromTheRoots(): void
+    {
+        self::assertTrue(self::test(new DepthRange(), null, 0));
+        self::assertTrue(self::test(new DepthRange(), null, \PHP_INT_MAX));
+    }
+
+    public function testDepthRangeOfASingleDepth(): void
+    {
+        $p = new DepthRange(2, 2);
+
+        self::assertSame([false, true, false], array_map(static fn(int $d): bool => self::test($p, null, $d), [1, 2, 3]));
     }
 
     /**
@@ -72,6 +99,22 @@ final class FieldPredicatesTest extends TestCase
     {
         self::assertTrue(self::test(new FieldEquals('match', true), new PublicNode(1, match: true)));
         self::assertTrue(self::test(new FieldEquals('isActive', true, new GetterAccessor()), new GetterNode(1, active: true)));
+    }
+
+    public function testFieldEqualsUsesTheGivenAccessor(): void
+    {
+        $p = new FieldEquals('id', 5, self::suffixAccessor());
+
+        self::assertTrue(self::test($p, ['id' => 1, 'id.custom' => 5]));
+        self::assertFalse(self::test($p, ['id' => 5, 'id.custom' => 1]));
+    }
+
+    public function testFieldInUsesTheGivenAccessor(): void
+    {
+        $p = new FieldIn('id', [5], self::suffixAccessor());
+
+        self::assertTrue(self::test($p, ['id' => 1, 'id.custom' => 5]));
+        self::assertFalse(self::test($p, ['id' => 5, 'id.custom' => 1]));
     }
 
     public function testFieldInTreatsNumericStringsAndIntsAlike(): void

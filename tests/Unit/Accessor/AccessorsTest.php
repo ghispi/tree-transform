@@ -69,6 +69,19 @@ final class AccessorsTest extends TestCase
         self::assertSame('yes', new GetterAccessor()->reader('island')($node));
     }
 
+    public function testGetterAccessorOnlyRecognisesPrefixesAtTheStart(): void
+    {
+        // "budgetTotal" contains "get" + capital letter, but not at the start: read with getBudgetTotal().
+        $node = new class {
+            public function getBudgetTotal(): int
+            {
+                return 7;
+            }
+        };
+
+        self::assertSame(7, new GetterAccessor()->reader('budgetTotal')($node));
+    }
+
     public function testPrivatePropertyAccessorReadsAnyVisibility(): void
     {
         $node = new PrivateNode(5, 1, 2);

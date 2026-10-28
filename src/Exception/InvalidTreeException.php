@@ -19,7 +19,6 @@ class InvalidTreeException extends \UnexpectedValueException implements TreeTran
         return match (true) {
             \is_int($id), \is_string($id) => var_export($id, true),
             $id === null => '(unknown id)',
-            \is_object($id) => $id::class,
             default => get_debug_type($id),
         };
     }

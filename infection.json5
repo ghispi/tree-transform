@@ -9,8 +9,9 @@
         "text": "var/infection.log",
         "summary": "var/infection-summary.log"
     },
-    "minMsi": 85,
-    "minCoveredMsi": 90,
+    "timeout": 60,
+    "minMsi": 95,
+    "minCoveredMsi": 95,
     "mutators": {
         "@default": true
     }

@@ -117,4 +117,9 @@ final class DepthStagesTest extends TestCase
         self::assertSame('B, F[G], I', Trees::compact($seen));
         self::assertSame(['B'], $spy->skipped);
     }
+
+    public function testDepthWindowDefaultsKeepTheWholeTree(): void
+    {
+        self::assertSame(RunningExample::WHOLE, Trees::compactOf(Tree::from(RunningExample::source())->pipe(new DepthWindow())));
+    }
 }

@@ -70,7 +70,7 @@ final class Rows
         }
         if (\is_string($id)) {
             // Same rule as PHP array keys: canonical integer strings become integers.
-            return preg_match('/^(0|-?[1-9][0-9]*)$/', $id) === 1 && (string) (int) $id === $id ? (int) $id : $id;
+            return (string) (int) $id === $id ? (int) $id : $id;
         }
         if ($id instanceof \Stringable) {
             return (string) $id;

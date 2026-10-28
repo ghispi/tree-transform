@@ -42,9 +42,40 @@ final class ExceptionsTest extends TestCase
         self::assertStringContainsString('(e.g. 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)', $message);
     }
 
+    public function testCycleMessageExportsIds(): void
+    {
+        self::assertSame(
+            "Parent cycle detected: 3 node(s) are not reachable from any root (e.g. 'a', 7, '8').",
+            CycleDetectedException::forIds(['a', 7, '8'])->getMessage(),
+        );
+    }
+
     public function testOrphanMessageSuggestsRootParent(): void
     {
         self::assertStringContainsString('pass it as "rootParent"', OrphanNodeException::forParent('0', 3)->getMessage());
+    }
+
+    public function testOrphanMessage(): void
+    {
+        self::assertSame(
+            "Parent '0' of 3 node(s) does not exist. If this value marks root nodes, pass it as \"rootParent\"; "
+            . 'otherwise choose an OrphanPolicy (AsRoot or Drop).',
+            OrphanNodeException::forParent('0', 3)->getMessage(),
+        );
+        self::assertStringStartsWith('Parent 5 of 1 node(s)', OrphanNodeException::forParent(5, 1)->getMessage());
+    }
+
+    public function testSubclassesCanDescribeIds(): void
+    {
+        $subclass = new class ('') extends InvalidTreeException {
+            public static function describeId(mixed $id): string
+            {
+                return self::describe($id);
+            }
+        };
+
+        self::assertSame("'a'", $subclass::describeId('a'));
+        self::assertSame('(unknown id)', $subclass::describeId(null));
     }
 
     public function testInvalidTreeDescribesIds(): void

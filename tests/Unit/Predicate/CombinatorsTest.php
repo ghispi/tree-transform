@@ -99,6 +99,36 @@ final class CombinatorsTest extends TestCase
         self::assertFalse($called);
     }
 
+    public function testInnerPredicatesAreExposedAsAListWithClosuresWrapped(): void
+    {
+        $depth = new DepthRange(1);
+        $closure = static fn(): bool => true;
+        // A string-keyed spread passes named variadic arguments; predicates() must still be a list.
+        $named = ['first' => $depth, 'second' => $closure];
+
+        foreach ([new AllOf(...$named), new AnyOf(...$named)] as $combinator) {
+            $predicates = $combinator->predicates();
+
+            self::assertSame([0, 1], array_keys($predicates));
+            self::assertSame($depth, $predicates[0]);
+            self::assertInstanceOf(Callback::class, $predicates[1]);
+            self::assertSame($closure, $predicates[1]->closure());
+        }
+        self::assertSame([], new AllOf()->predicates());
+        self::assertSame([], new AnyOf()->predicates());
+    }
+
+    public function testNotExposesItsInnerPredicate(): void
+    {
+        $depth = new DepthRange(1);
+        $closure = static fn(): bool => true;
+        $wrapped = new Not($closure)->inner();
+
+        self::assertSame($depth, new Not($depth)->inner());
+        self::assertInstanceOf(Callback::class, $wrapped);
+        self::assertSame($closure, $wrapped->closure());
+    }
+
     public function testNot(): void
     {
         self::assertFalse(self::test(new Not(static fn(): bool => true)));

@@ -133,6 +133,29 @@ final class AdjacencyListSourceTest extends TestCase
         self::read([self::n('r'), self::n('a', 'b'), self::n('b', 'a')]);
     }
 
+    public function testSelfParentThrowsAtOnceNamingOnlyThatNode(): void
+    {
+        // The duplicate id after the self-parent row would be reported if reading went on.
+        $this->expectException(CycleDetectedException::class);
+        $this->expectExceptionMessage("1 node(s) are not reachable from any root (e.g. 'a')");
+
+        self::read([self::n('r'), self::n('a', 'a'), self::n('b', 'c'), self::n('c', 'b'), self::n('r')]);
+    }
+
+    public function testCycleMessageLeavesOutReachableDescendants(): void
+    {
+        $this->expectExceptionMessage("2 node(s) are not reachable from any root (e.g. 'a', 'b')");
+
+        self::read([self::n('r'), self::n('c', 'r'), self::n('d', 'c'), self::n('a', 'b'), self::n('b', 'a')]);
+    }
+
+    public function testDroppedOrphansNextToRootsWithChildrenAreNotACycle(): void
+    {
+        $rows = [self::n('r'), self::n('c', 'r'), self::n('d', 'c'), self::n('o', 'missing'), self::n('p', 'o'), self::n('s')];
+
+        self::assertSame('r[c[d]], s', self::read($rows, OrphanPolicy::Drop));
+    }
+
     public function testDuplicateIdsThrow(): void
     {
         $this->expectException(InvalidTreeException::class);

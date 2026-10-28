@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Unit;
 
+use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Sink\FlatListSink;
 use Ghispi\TreeTransform\Source\DepthListSource;
 use Ghispi\TreeTransform\Stage\MaxDepth;
@@ -90,6 +91,29 @@ final class TreeTest extends TestCase
         self::assertSame(RunningExample::WHOLE, Trees::compactOf(Tree::fromPreorderedAdjacencyList($rows)));
         self::assertSame(RunningExample::WHOLE, Trees::compactOf(Tree::fromMaterializedPath($rows)));
         self::assertSame(RunningExample::WHOLE, Trees::compactOf(Tree::fromNestedArray(RunningExample::nestedArrays())));
+    }
+
+    public function testMaterializedPathFacadeRejectsGapsByDefault(): void
+    {
+        $this->expectException(InvalidTreeException::class);
+
+        Tree::fromMaterializedPath([['path' => '1,'], ['path' => '1,2,3,']])->count();
+    }
+
+    public function testActiveTrailDefaults(): void
+    {
+        // Siblings shown, one level of children below an active node, every active node expanded.
+        $tree = Tree::from(RunningExample::source())->activeTrail(RunningExample::isId('B', 'I'));
+
+        self::assertSame('A[B[C, D], F], H[I]', Trees::compactOf($tree));
+    }
+
+    public function testToNestedArrayKeepsEmptyChildrenByDefault(): void
+    {
+        self::assertSame(
+            [['id' => 'a', 'children' => [['id' => 'b', 'children' => []]]]],
+            Tree::fromDepthList([['id' => 'a'], ['id' => 'b']])->toNestedArray(),
+        );
     }
 
     public function testAdjacencyFacadePassesOrphanPolicyAndRootParent(): void

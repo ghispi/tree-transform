@@ -121,4 +121,22 @@ final class KeepAncestorsTest extends TestCase
 
         self::assertSame('A[B[C, D], F[G]], H[I]', Trees::compact($seen));
     }
+
+    public function testSkippingAFlushedAncestorAlsoSkipsItInTheInput(): void
+    {
+        $spy = SpyCursor::on(RunningExample::source());
+        $cursor = new KeepAncestors()->apply($spy, new Callback(RunningExample::isId('C', 'I')));
+        $seen = [];
+        while ($cursor->next()) {
+            $seen[] = [$cursor->depth(), $cursor->node()];
+            if (Field::id($cursor->node()) === 'B') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame('A[B], H[I]', Trees::compact($seen));
+        // C (the input's current node) and D, the rest of B's subtree, are skipped in the input: E is never read.
+        self::assertSame(['C', 'D'], $spy->skipped);
+        self::assertSame(['A', 'B', 'C', 'D', 'F', 'G', 'H', 'I'], $spy->visited);
+    }
 }

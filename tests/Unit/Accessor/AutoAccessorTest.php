@@ -13,6 +13,7 @@ use Ghispi\TreeTransform\Tests\Fixtures\Model\PrivateNode;
 use Ghispi\TreeTransform\Tests\Fixtures\Model\PublicNode;
 use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(AutoAccessor::class)]
@@ -50,6 +51,112 @@ final class AutoAccessorTest extends TestCase
         self::assertTrue($accessor->reader('active')($node), 'isActive()');
         self::assertTrue($accessor->reader('kids')($node), 'hasKids()');
         self::assertSame('T', $accessor->reader('title')($node), 'title()');
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: mixed}>
+     */
+    public static function computedGetters(): array
+    {
+        return [
+            'get' => ['label', 'get'],
+            'is' => ['open', 'is'],
+            'has' => ['kids', 'has'],
+            'bare name' => ['title', 'bare'],
+        ];
+    }
+
+    /**
+     * Getters without a backing property, so a wrong method name cannot fall back to reading the property.
+     */
+    #[DataProvider('computedGetters')]
+    public function testGetterWithoutBackingProperty(string $field, mixed $expected): void
+    {
+        $node = new class {
+            public function getLabel(): string
+            {
+                return 'get';
+            }
+
+            public function isOpen(): string
+            {
+                return 'is';
+            }
+
+            public function hasKids(): string
+            {
+                return 'has';
+            }
+
+            public function title(): string
+            {
+                return 'bare';
+            }
+        };
+
+        self::assertSame($expected, new AutoAccessor()->reader($field)($node));
+    }
+
+    public function testGetterPrecedenceIsGetIsHasBareName(): void
+    {
+        $node = new class {
+            public function getA(): string
+            {
+                return 'getA';
+            }
+
+            public function isA(): string
+            {
+                return 'isA';
+            }
+
+            public function isB(): string
+            {
+                return 'isB';
+            }
+
+            public function hasB(): string
+            {
+                return 'hasB';
+            }
+
+            public function hasC(): string
+            {
+                return 'hasC';
+            }
+
+            public function c(): string
+            {
+                return 'c';
+            }
+        };
+        $accessor = new AutoAccessor();
+
+        self::assertSame('getA', $accessor->reader('a')($node));
+        self::assertSame('isB', $accessor->reader('b')($node));
+        self::assertSame('hasC', $accessor->reader('c')($node));
+    }
+
+    public function testNonPublicGettersAreSkipped(): void
+    {
+        $node = new class {
+            public function isSecret(): string
+            {
+                return 'public isSecret()';
+            }
+
+            private function getSecret(): string
+            {
+                return 'private getSecret()';
+            }
+
+            public function unused(): string
+            {
+                return $this->getSecret();
+            }
+        };
+
+        self::assertSame('public isSecret()', new AutoAccessor()->reader('secret')($node));
     }
 
     public function testPrivatePropertyWithoutGetter(): void

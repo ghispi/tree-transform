@@ -11,6 +11,7 @@ use Ghispi\TreeTransform\Strategy\ActiveTrail;
 use Ghispi\TreeTransform\Strategy\ActiveTrailCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
+use Ghispi\TreeTransform\Tests\Fixtures\SpyCursor;
 use Ghispi\TreeTransform\Tests\Fixtures\Trees;
 use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -104,5 +105,40 @@ final class ActiveTrailTest extends TestCase
         }
 
         self::assertSame('A[B, F], H', Trees::compact($seen));
+    }
+
+    public function testConsumerSkipIsForwardedOnceTheSingleActiveNodeIsFound(): void
+    {
+        $spy = SpyCursor::on(RunningExample::source());
+        $cursor = new ActiveTrail(multiple: false)->apply($spy, new Callback(RunningExample::isId('A')));
+        $seen = [];
+        while ($cursor->next()) {
+            $seen[] = [$cursor->depth(), $cursor->node()];
+            if (Field::id($cursor->node()) === 'A') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame('A, H', Trees::compact($seen));
+        self::assertSame(['A'], $spy->skipped);
+        self::assertSame(['A', 'H', 'I'], $spy->visited);
+    }
+
+    public function testSingleModeSkipBeforeTheActiveNodeIsFoundStillReadsTheSubtree(): void
+    {
+        // The consumer skips A before E (the first active node) is read; E must still be found inside A's subtree,
+        // so the later active node I is ignored.
+        $spy = SpyCursor::on(RunningExample::source());
+        $cursor = new ActiveTrail(multiple: false)->apply($spy, new Callback(RunningExample::isId('E', 'I')));
+        $seen = [];
+        while ($cursor->next()) {
+            $seen[] = [$cursor->depth(), $cursor->node()];
+            if (Field::id($cursor->node()) === 'A') {
+                $cursor->skipSubtree();
+            }
+        }
+
+        self::assertSame('A, H', Trees::compact($seen));
+        self::assertSame([], $spy->skipped);
     }
 }

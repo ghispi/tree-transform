@@ -91,6 +91,15 @@ final class FlatSinksTest extends TestCase
         self::assertSame([], Trees::nestedSetProblems($rows));
     }
 
+    public function testNestedSetSinkDefaults(): void
+    {
+        $rows = new NestedSetSink()->consume(self::promoted()->cursor());
+
+        self::assertSame(['A' => 1, 'C' => 2, 'E' => 4, 'I' => 7], self::column($rows, 'lft'), 'one numbering across roots');
+        self::assertSame(['A' => 6, 'C' => 3, 'E' => 5, 'I' => 8], self::column($rows, 'rgt'));
+        self::assertSame(['A' => 0, 'C' => 1, 'E' => 1, 'I' => 0], self::column($rows, 'lvl'), 'roots at level 0');
+    }
+
     public function testNestedSetRestartPerRootAndLevelBase(): void
     {
         $rows = self::promoted()->toNestedSet('l', 'r', 'level', 1, true);
