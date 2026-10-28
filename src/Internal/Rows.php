@@ -46,8 +46,12 @@ final class Rows
      */
     public static function key(mixed $id): int|string
     {
-        if (\is_int($id) || \is_string($id)) {
+        if (\is_int($id)) {
             return $id;
+        }
+        if (\is_string($id)) {
+            // Same rule as PHP array keys: canonical integer strings become integers.
+            return preg_match('/^(0|-?[1-9][0-9]*)$/', $id) === 1 && (string) (int) $id === $id ? (int) $id : $id;
         }
         if ($id instanceof \Stringable) {
             return (string) $id;
@@ -59,6 +63,24 @@ final class Rows
         throw new \Ghispi\TreeTransform\Exception\InvalidTreeException(
             \sprintf('Node ids must be int, string or Stringable, got %s.', get_debug_type($id)),
         );
+    }
+
+    /**
+     * The class in $class's hierarchy that declares $property (private parent properties included), or null.
+     *
+     * @param class-string $class
+     *
+     * @return class-string|null
+     */
+    public static function declaringClass(string $class, string $property): ?string
+    {
+        for ($current = $class; $current !== false; $current = get_parent_class($current)) {
+            if (property_exists($current, $property)) {
+                return (new \ReflectionProperty($current, $property))->getDeclaringClass()->getName();
+            }
+        }
+
+        return null;
     }
 
     /**

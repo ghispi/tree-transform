@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Accessor;
 
+use Ghispi\TreeTransform\Internal\Rows;
+
 /**
  * Default accessor: works with arrays, ArrayAccess and objects without configuration.
  *
@@ -50,7 +52,7 @@ final class AutoAccessor implements Accessor
                 return static fn(object $node): mixed => $node->{$method}();
             }
         }
-        if (property_exists($class, $field)) {
+        if (Rows::declaringClass($class, $field) !== null) {
             $reader = (new PrivatePropertyAccessor($class))->reader($field);
 
             return static fn(object $node): mixed => $reader($node);

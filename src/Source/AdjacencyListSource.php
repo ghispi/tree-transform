@@ -52,7 +52,9 @@ final readonly class AdjacencyListSource implements Source
         $roots = [];
 
         $offset = 0;
-        foreach ($this->rows as $row) {
+        $iterator = Rows::iterator($this->rows);
+        for ($iterator->rewind(); $iterator->valid(); $iterator->next()) {
+            $row = $iterator->current();
             $nodes[$offset] = $row;
             $id = Rows::key($readId($row));
             if (isset($offsetById[$id])) {

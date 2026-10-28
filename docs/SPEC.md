@@ -155,6 +155,8 @@ resolved once per class), so most users never configure one.
 Details:
 
 - **Forests**: all sources support multiple roots. Nested set resets its stack when `root` changes.
+- **Ids**: integers and canonical integer strings are the same id (`5` = `'5'`), like PHP array keys, so PDO string
+  results work.
 - **Adjacency roots**: `parent === null`, or explicit root id(s). **Orphan policy** (parent id not present):
   `OrphanPolicy::AsRoot | Drop | Throw` (default `Throw`).
 - **Cycles** (adjacency): nodes unreachable from any root are reported; default throws `CycleDetected`.
@@ -165,7 +167,7 @@ Details:
   risk is locale/ICU collations that ignore punctuation — the docs recommend binary collation (`COLLATE "C"`,
   `utf8mb4_bin`). Ordering violations below a root are detected.
 - **Validation** is always on and cheap: integer `lft`/`rgt`, `lft < rgt`, increasing `lft`, child intervals inside
-  the parent; depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
+  the parent, rows of each root contiguous; depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
   exceptions implementing `Ghispi\TreeTransform\Exception\TreeTransformException`.
 
 ## 5. Filter strategies

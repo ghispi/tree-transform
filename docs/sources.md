@@ -578,7 +578,7 @@ Every exception the library throws implements `Ghispi\TreeTransform\Exception\Tr
 
 | Exception | When |
 |---|---|
-| `InvalidTreeException` | The input is not a valid tree: bad ordering, overlapping intervals, missing parent path, non-integer `lft`, bad depth sequence, duplicate id |
+| `InvalidTreeException` | The input is not a valid tree: bad ordering, overlapping intervals, rows of one root split up, missing parent path, non-integer `lft`, bad depth sequence, duplicate id |
 | `OrphanNodeException` (extends `InvalidTreeException`) | Adjacency list: a parent id does not exist (with `OrphanPolicy::Throw`) |
 | `CycleDetectedException` (extends `InvalidTreeException`) | Adjacency list: nodes not reachable from any root |
 | `InvalidArgumentException` | A component got an invalid option, e.g. `new MaxDepth(-1)` |

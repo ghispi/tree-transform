@@ -34,6 +34,9 @@ final class NestedSetCursor implements Cursor
 
     private bool $hasRoot = false;
 
+    /** @var array<int|string, true> roots already read, to detect rows not grouped by root */
+    private array $seenRoots = [];
+
     private int $skipBefore = \PHP_INT_MIN;
 
     /**
@@ -68,6 +71,16 @@ final class NestedSetCursor implements Cursor
             if ($this->root !== null) {
                 $root = ($this->root)($row);
                 if (!$this->hasRoot || $root !== $this->lastRoot) {
+                    $rootKey = \is_object($root) ? 'object#' . spl_object_id($root) : Rows::key($root ?? '');
+                    if (isset($this->seenRoots[$rootKey])) {
+                        throw InvalidTreeException::at(null, \sprintf(
+                            'rows of root %s are not contiguous. Order rows by %s, %s.',
+                            var_export($rootKey, true),
+                            $this->fields->root ?? 'root',
+                            $this->fields->left,
+                        ));
+                    }
+                    $this->seenRoots[$rootKey] = true;
                     // A new tree starts: forget everything about the previous one.
                     $this->hasRoot = true;
                     $this->lastRoot = $root;

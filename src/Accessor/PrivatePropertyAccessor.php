@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Accessor;
 
+use Ghispi\TreeTransform\Internal\Rows;
+
 /**
  * Reads properties of any visibility declared in $class (or its parents) without calling getters.
  *
@@ -21,10 +23,7 @@ final readonly class PrivatePropertyAccessor implements Accessor
     {
         $class = $this->class;
         // Bind to the class that declares the property so private parent properties are visible too.
-        $scope = $class;
-        if (property_exists($class, $field)) {
-            $scope = (new \ReflectionProperty($class, $field))->getDeclaringClass()->getName();
-        }
+        $scope = Rows::declaringClass($class, $field) ?? $class;
 
         $reader = static fn(mixed $node): mixed => $node->{$field} ?? null;
 
