@@ -7,18 +7,19 @@ namespace Ghispi\TreeTransform\Source;
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Internal\Rows;
+use Ghispi\TreeTransform\Internal\RowStream;
 
 /**
  * @internal created by PreorderedAdjacencySource
  */
 final class PreorderedAdjacencyCursor implements Cursor
 {
+    use RowStream;
+
     /** @var array<int, int|string> ids of open ancestors, indexed by depth */
     private array $ids = [];
 
     private int $open = 0;
-
-    private bool $started = false;
 
     private bool $done = false;
 
@@ -29,31 +30,28 @@ final class PreorderedAdjacencyCursor implements Cursor
     private int $skipBelow = -1;
 
     /**
-     * @param \Iterator<mixed>       $rows
+     * @param iterable<mixed>        $rows
      * @param \Closure(mixed): mixed $id
      * @param \Closure(mixed): mixed $parent
      */
     public function __construct(
-        private readonly \Iterator $rows,
+        iterable $rows,
         private readonly \Closure $id,
         private readonly \Closure $parent,
         private readonly int|string|null $rootParent,
-    ) {}
+    ) {
+        $this->initRows($rows);
+    }
 
     public function next(): bool
     {
         if ($this->done) {
             return false;
         }
-        if ($this->started) {
-            $this->rows->next();
-        } else {
-            $this->rows->rewind();
-            $this->started = true;
-        }
 
-        for (; $this->rows->valid(); $this->rows->next()) {
-            $row = $this->rows->current();
+
+        while ($this->fetchRow()) {
+            $row = $this->row;
             $id = Rows::key(($this->id)($row));
             $parent = ($this->parent)($row);
 

@@ -6,13 +6,14 @@ namespace Ghispi\TreeTransform\Source;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
+use Ghispi\TreeTransform\Internal\RowStream;
 
 /**
  * @internal created by MaterializedPathSource
  */
 final class MaterializedPathCursor implements Cursor
 {
-    private bool $started = false;
+    use RowStream;
 
     private bool $done = false;
 
@@ -36,31 +37,28 @@ final class MaterializedPathCursor implements Cursor
     private int $rootSegments = 0;
 
     /**
-     * @param \Iterator<mixed>       $rows
+     * @param iterable<mixed>        $rows
      * @param \Closure(mixed): mixed $path
      */
     public function __construct(
-        private readonly \Iterator $rows,
+        iterable $rows,
         private readonly \Closure $path,
         private readonly MaterializedPathFields $fields,
         private readonly bool $allowGaps,
-    ) {}
+    ) {
+        $this->initRows($rows);
+    }
 
     public function next(): bool
     {
         if ($this->done) {
             return false;
         }
-        if ($this->started) {
-            $this->rows->next();
-        } else {
-            $this->rows->rewind();
-            $this->started = true;
-        }
+
         $sep = $this->fields->separator;
 
-        for (; $this->rows->valid(); $this->rows->next()) {
-            $row = $this->rows->current();
+        while ($this->fetchRow()) {
+            $row = $this->row;
             $raw = ($this->path)($row);
             if (!\is_string($raw) && !\is_int($raw)) {
                 throw InvalidTreeException::at(null, \sprintf('path field "%s" must be a string, got %s.', $this->fields->path, get_debug_type($raw)));

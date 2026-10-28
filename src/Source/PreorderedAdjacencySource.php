@@ -31,7 +31,7 @@ final readonly class PreorderedAdjacencySource implements Source
     public function open(): Cursor
     {
         return new PreorderedAdjacencyCursor(
-            Rows::iterator($this->rows),
+            $this->rows,
             $this->accessor->reader($this->fields->id),
             $this->accessor->reader($this->fields->parent),
             $this->rootParent === null ? null : Rows::key($this->rootParent),

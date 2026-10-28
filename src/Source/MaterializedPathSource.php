@@ -7,7 +7,6 @@ namespace Ghispi\TreeTransform\Source;
 use Ghispi\TreeTransform\Accessor\Accessor;
 use Ghispi\TreeTransform\Accessor\AutoAccessor;
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Internal\Rows;
 
 /**
  * Reads materialized path rows ordered by path.
@@ -34,7 +33,7 @@ final readonly class MaterializedPathSource implements Source
     public function open(): Cursor
     {
         return new MaterializedPathCursor(
-            Rows::iterator($this->rows),
+            $this->rows,
             $this->accessor->reader($this->fields->path),
             $this->fields,
             $this->allowGaps,

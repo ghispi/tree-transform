@@ -52,9 +52,9 @@ final readonly class AdjacencyListSource implements Source
         $roots = [];
 
         $offset = 0;
-        $iterator = Rows::iterator($this->rows);
-        for ($iterator->rewind(); $iterator->valid(); $iterator->next()) {
-            $row = $iterator->current();
+        // Arrays are read with foreach (no copy); other iterables through an Iterator (detects reused generators).
+        $rows = \is_array($this->rows) ? $this->rows : self::each(Rows::iterator($this->rows));
+        foreach ($rows as $row) {
             $nodes[$offset] = $row;
             $id = Rows::key($readId($row));
             if (isset($offsetById[$id])) {
@@ -185,5 +185,17 @@ final readonly class AdjacencyListSource implements Source
         }
 
         return $count;
+    }
+
+    /**
+     * @param \Iterator<mixed> $iterator
+     *
+     * @return \Generator<mixed>
+     */
+    private static function each(\Iterator $iterator): \Generator
+    {
+        for ($iterator->rewind(); $iterator->valid(); $iterator->next()) {
+            yield $iterator->current();
+        }
     }
 }

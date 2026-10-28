@@ -6,13 +6,14 @@ namespace Ghispi\TreeTransform\Source;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
+use Ghispi\TreeTransform\Internal\RowStream;
 
 /**
  * @internal created by DepthListSource
  */
 final class DepthListCursor implements Cursor
 {
-    private bool $started = false;
+    use RowStream;
 
     private bool $done = false;
 
@@ -23,28 +24,26 @@ final class DepthListCursor implements Cursor
     private int $skipBelow = -1;
 
     /**
-     * @param \Iterator<mixed> $entries
+     * @param iterable<mixed> $entries
      */
-    public function __construct(private readonly \Iterator $entries, private readonly bool $keyed) {}
+    public function __construct(iterable $entries, private readonly bool $keyed)
+    {
+        $this->initRows($entries);
+    }
 
     public function next(): bool
     {
         if ($this->done) {
             return false;
         }
-        if ($this->started) {
-            $this->entries->next();
-        } else {
-            $this->entries->rewind();
-            $this->started = true;
-        }
 
-        for (; $this->entries->valid(); $this->entries->next()) {
+
+        while ($this->fetchRow()) {
             if ($this->keyed) {
-                $depth = $this->entries->key();
-                $node = $this->entries->current();
+                $depth = $this->rowKey;
+                $node = $this->row;
             } else {
-                $pair = $this->entries->current();
+                $pair = $this->row;
                 if (!\is_array($pair) || !\array_key_exists(0, $pair) || !\array_key_exists(1, $pair)) {
                     throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs.');
                 }

@@ -10,11 +10,17 @@ use Ghispi\TreeTransform\Internal\Rows;
 
 /**
  * @internal created by NestedArraySource
+ *
+ * List arrays are walked by position; other iterables through an Iterator. (A stack of ArrayIterators would make
+ * every push scan PHP's iterator table, which is O(depth) per node.)
  */
 final class NestedArrayCursor implements Cursor
 {
-    /** @var array<int, \Iterator<mixed>> iterators positioned at the next sibling to visit, indexed by depth */
+    /** @var array<int, list<mixed>|\Iterator<mixed>> sibling lists (or iterators) being walked, by depth */
     private array $stack = [];
+
+    /** @var array<int, int> next position in each list (unused for iterators) */
+    private array $positions = [];
 
     private int $size = 0;
 
@@ -42,34 +48,41 @@ final class NestedArrayCursor implements Cursor
     {
         if (!$this->started) {
             $this->started = true;
-            $roots = Rows::iterator($this->roots);
-            $roots->rewind();
-            $this->stack[0] = $roots;
-            $this->size = 1;
+            $this->push($this->roots);
         } elseif ($this->hasCurrent && !$this->skip) {
             $children = ($this->children)($this->node);
             if ($children !== null && $children !== []) {
                 if (!is_iterable($children)) {
                     throw InvalidTreeException::at(null, \sprintf('field "%s" must be iterable or null, got %s.', $this->childrenField, get_debug_type($children)));
                 }
-                $iterator = Rows::iterator($children);
-                $iterator->rewind();
-                $this->stack[$this->size++] = $iterator;
+                $this->push($children);
             }
         }
         $this->skip = false;
 
         while ($this->size > 0) {
-            $iterator = $this->stack[$this->size - 1];
-            if ($iterator->valid()) {
-                $this->node = $iterator->current();
-                $iterator->next();
-                $this->depth = $this->size - 1;
+            $level = $this->size - 1;
+            $top = $this->stack[$level];
+            if (\is_array($top)) {
+                $position = $this->positions[$level];
+                if ($position < \count($top)) {
+                    $this->node = $top[$position];
+                    $this->positions[$level] = $position + 1;
+                    $this->depth = $level;
+                    $this->hasCurrent = true;
+
+                    return true;
+                }
+            } elseif ($top->valid()) {
+                $this->node = $top->current();
+                $top->next();
+                $this->depth = $level;
                 $this->hasCurrent = true;
 
                 return true;
             }
-            unset($this->stack[--$this->size]);
+            unset($this->stack[$level]);
+            --$this->size;
         }
         $this->hasCurrent = false;
         $this->node = null;
@@ -90,5 +103,21 @@ final class NestedArrayCursor implements Cursor
     public function skipSubtree(): void
     {
         $this->skip = true;
+    }
+
+    /**
+     * @param iterable<mixed> $children
+     */
+    private function push(iterable $children): void
+    {
+        if (\is_array($children) && array_is_list($children)) {
+            $this->stack[$this->size] = $children;
+            $this->positions[$this->size] = 0;
+        } else {
+            $iterator = Rows::iterator($children);
+            $iterator->rewind();
+            $this->stack[$this->size] = $iterator;
+        }
+        ++$this->size;
     }
 }

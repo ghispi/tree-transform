@@ -7,13 +7,14 @@ namespace Ghispi\TreeTransform\Source;
 use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Internal\Rows;
+use Ghispi\TreeTransform\Internal\RowStream;
 
 /**
  * @internal created by NestedSetSource
  */
 final class NestedSetCursor implements Cursor
 {
-    private bool $started = false;
+    use RowStream;
 
     private bool $done = false;
 
@@ -39,33 +40,34 @@ final class NestedSetCursor implements Cursor
     private int $skipBefore = \PHP_INT_MIN;
 
     /**
-     * @param \Iterator<mixed>            $rows
-     * @param \Closure(mixed): mixed      $left
-     * @param \Closure(mixed): mixed      $right
+     * @param iterable<mixed>              $rows
+     * @param \Closure(mixed): mixed        $left
+     * @param \Closure(mixed): mixed        $right
      * @param (\Closure(mixed): mixed)|null $root
+     * @param bool                         $inline read array rows by key instead of through the closures
      */
     public function __construct(
-        private readonly \Iterator $rows,
+        iterable $rows,
         private readonly \Closure $left,
         private readonly \Closure $right,
         private readonly ?\Closure $root,
         private readonly NestedSetFields $fields,
-    ) {}
+        private readonly bool $inline = false,
+    ) {
+        $this->initRows($rows);
+    }
 
     public function next(): bool
     {
         if ($this->done) {
             return false;
         }
-        if ($this->started) {
-            $this->rows->next();
-        } else {
-            $this->rows->rewind();
-            $this->started = true;
-        }
+        $leftKey = $this->fields->left;
+        $rightKey = $this->fields->right;
 
-        for (; $this->rows->valid(); $this->rows->next()) {
-            $row = $this->rows->current();
+        while ($this->fetchRow()) {
+            $row = $this->row;
+            $array = $this->inline && \is_array($row);
 
             if ($this->root !== null) {
                 $root = ($this->root)($row);
@@ -84,11 +86,17 @@ final class NestedSetCursor implements Cursor
                 }
             }
 
-            $left = Rows::int(($this->left)($row), $this->fields->left, $row);
+            $left = $array ? ($row[$leftKey] ?? null) : ($this->left)($row);
+            if (!\is_int($left)) {
+                $left = Rows::int($left, $leftKey, $row);
+            }
             if ($left < $this->skipBefore) {
                 continue;
             }
-            $right = Rows::int(($this->right)($row), $this->fields->right, $row);
+            $right = $array ? ($row[$rightKey] ?? null) : ($this->right)($row);
+            if (!\is_int($right)) {
+                $right = Rows::int($right, $rightKey, $row);
+            }
 
             if ($left >= $right) {
                 throw InvalidTreeException::at(null, \sprintf('left value %d is not lower than right value %d.', $left, $right));

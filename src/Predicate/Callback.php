@@ -24,6 +24,14 @@ final readonly class Callback implements Predicate
         return $predicate instanceof Predicate ? $predicate : new self($predicate);
     }
 
+    /**
+     * The wrapped closure.
+     */
+    public function closure(): \Closure
+    {
+        return $this->test;
+    }
+
     public function matches(mixed $node, int $depth, Ancestors $ancestors): bool
     {
         return (bool) ($this->test)($node, $depth, $ancestors);

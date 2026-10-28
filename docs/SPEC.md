@@ -115,8 +115,8 @@ interface Sink
 ```
 
 Why a cursor class instead of `Generator::send()`: explicit `skipSubtree()` is easier to reason about and test, and it
-lets sources skip work. Phase 0 benchmarks a generator-based variant (`yield $depth => $node`) as an alternative
-internal representation; the public contract stays the same either way.
+lets sources skip work. Phase 0 measured a generator-based internal pipeline 1.65–1.9× faster like-for-like; it is
+planned as an internal change behind the same public `Cursor` contract (roadmap).
 
 ### 3.2 Field access
 
@@ -133,7 +133,8 @@ interface Accessor
 
 Implementations: `ArrayKeyAccessor` (`$row['lft']`), `PropertyAccessor` (public props), `GetterAccessor`
 (`getLft()`), `PrivatePropertyAccessor` (bound closure — fast, used for Gedmo entities). Array sources get a
-specialised fast path that reads keys inline (benchmarked in Phase 0).
+specialised fast path that reads keys inline (Phase 0: 15–24% of read time), and list arrays are read by position
+without being copied.
 
 Field names are configured with small readonly value objects, e.g.
 `new NestedSetFields(left: 'lft', right: 'rgt', root: 'root')`, with presets such as `NestedSetFields::gedmo()`.
@@ -298,9 +299,9 @@ final class Ancestors implements \Countable, \IteratorAggregate
   `toArray()` / iterates.
 - One `Ancestors` instance is reused per stage; it is valid **only during the `matches()` call**.
 - Ancestors are those of the stage's **input** (after previous stages, not necessarily the raw source).
-- Phase 0 benchmarks the overhead; if it is measurable on `Prune`, tracking is switched on only for predicates
-  that use it (closures with a third parameter, detected once by reflection, or a `NeedsAncestors` marker
-  interface). The public API stays the same.
+- Phase 0 measured the overhead at 7–15% of `Prune`, so tracking is switched on only for predicates that can read
+  ancestors: closures with a third (or variadic) parameter, detected once by reflection; custom `Predicate` classes;
+  combinators containing either. Built-in field and depth predicates never track.
 
 Example — hide everything below an unpublished section:
 
@@ -388,12 +389,18 @@ Before 1.0 it is split into `ghispi/tree-transform-gedmo` if it grows its own re
 
 ## 10. Performance
 
-### Targets (to be calibrated in Phase 0 on PHP 8.4, JIT off)
+### Targets (calibrated in Phase 0 on PHP 8.4, JIT off)
 
-- Streaming strategies: peak memory growth independent of n — asserted in tests (e.g. 1M generated nodes through
-  `iterate()` stays under a fixed budget).
-- Throughput target ≥ 1M nodes/s for `Prune` over an array nested set; ≥ 2× faster and lower memory than a naive
-  recursive "build full tree then filter" baseline and than Gedmo `buildTree()` + filtering.
+| Target | Status |
+|---|---|
+| Streaming strategies: peak memory independent of n (asserted in tests: 1.1M nodes under 2 MB growth) | met |
+| ≥ 1M nodes/s for `Prune` over an array nested set | met (2–8M nodes/s) |
+| Much lower memory than a naive "build the full tree, then filter" baseline | met (2–9× lower) |
+| Faster than that baseline for pre-ordered inputs (nested set → `KeepAncestors` → nested array) | met (~1.2×) |
+| ~~≥ 2× faster than the naive baseline~~ | revised: only reachable with a generator-based internal pipeline (measured 2.5× for `KeepAncestors`), see roadmap |
+
+Adjacency lists in arbitrary order stay slower than the naive baseline (index build and cycle check); use
+`PreorderedAdjacencySource` or a nested set when speed matters.
 
 ### Benchmarks (phpbench)
 
@@ -451,6 +458,7 @@ docs/
 | **0.1** | Cursor, all sources, `Prune` / `KeepAncestors` / `Promote` + `OnMatch`, `ActiveTrail`, predicates with lazy `Ancestors`, `iterate` / nested array / adjacency sinks, facade, differential tests, docs for all of it. |
 | **0.2** | `NestedSetSink`, `Annotate`, `Map` / `MaxDepth` / `Limit` / `DepthWindow`, Gedmo bridge (incl. `ActiveTrail` pushdown) + integration tests. |
 | **0.3** | `Placeholder`, `MinMatches`, `SortSiblings`. |
+| **0.4** | Generator-based internal pipeline behind the `Cursor` contract (measured 2.1–3.4× faster pipelines), faster adjacency index. |
 | **1.0** | API freeze, docs site, benchmark report published. |
 
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Strategy;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
+use Ghispi\TreeTransform\Internal\CompiledPredicate;
 use Ghispi\TreeTransform\Predicate\Ancestors;
 use Ghispi\TreeTransform\Predicate\Predicate;
 
@@ -18,6 +19,11 @@ final class MinMatchesCursor implements Cursor
     private const int DROP = 2;
 
     private readonly Ancestors $ancestors;
+
+    /** @var \Closure(mixed, int, Ancestors): mixed */
+    private readonly \Closure $test;
+
+    private readonly bool $trackAncestors;
 
     /** @var array<int, mixed> */
     private array $queueNodes = [];
@@ -58,10 +64,13 @@ final class MinMatchesCursor implements Cursor
 
     public function __construct(
         private readonly Cursor $input,
-        private readonly Predicate $predicate,
+        Predicate $predicate,
         private readonly int $min,
     ) {
         $this->ancestors = new Ancestors();
+        $compiled = CompiledPredicate::of($predicate);
+        $this->test = $compiled->test;
+        $this->trackAncestors = $compiled->needsAncestors;
     }
 
     public function next(): bool
@@ -137,8 +146,10 @@ final class MinMatchesCursor implements Cursor
         $this->pathKept[$depth] = false;
         $this->pathLength = $depth + 1;
 
-        $this->ancestors->enter($node, $depth);
-        if (!$this->predicate->matches($node, $depth, $this->ancestors)) {
+        if ($this->trackAncestors) {
+            $this->ancestors->enter($node, $depth);
+        }
+        if (!(bool) ($this->test)($node, $depth, $this->ancestors)) {
             return;
         }
         // Count the match for the node and every undecided ancestor; kept ones are a prefix of the path.

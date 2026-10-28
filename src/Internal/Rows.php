@@ -49,6 +49,18 @@ final class Rows
     }
 
     /**
+     * The input itself when it is a list array, which cursors read by position: no copy, no iterator.
+     *
+     * @param iterable<mixed> $rows
+     *
+     * @return list<mixed>|null
+     */
+    public static function list(iterable $rows): ?array
+    {
+        return \is_array($rows) && array_is_list($rows) ? $rows : null;
+    }
+
+    /**
      * Normalises an int-like id to an array key ("5" and 5 become the same key).
      */
     public static function key(mixed $id): int|string

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Strategy;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
+use Ghispi\TreeTransform\Internal\CompiledPredicate;
 use Ghispi\TreeTransform\Predicate\Ancestors;
 use Ghispi\TreeTransform\Predicate\Predicate;
 
@@ -14,6 +15,11 @@ use Ghispi\TreeTransform\Predicate\Predicate;
 final class KeepAncestorsCursor implements Cursor
 {
     private readonly Ancestors $ancestors;
+
+    /** @var \Closure(mixed, int, Ancestors): mixed */
+    private readonly \Closure $test;
+
+    private readonly bool $trackAncestors;
 
     /** @var array<int, mixed> current input path, indexed by depth */
     private array $path = [];
@@ -40,10 +46,13 @@ final class KeepAncestorsCursor implements Cursor
 
     public function __construct(
         private readonly Cursor $input,
-        private readonly Predicate $predicate,
+        Predicate $predicate,
         private readonly OnMatch $onMatch,
     ) {
         $this->ancestors = new Ancestors();
+        $compiled = CompiledPredicate::of($predicate);
+        $this->test = $compiled->test;
+        $this->trackAncestors = $compiled->needsAncestors;
     }
 
     public function next(): bool
@@ -76,8 +85,10 @@ final class KeepAncestorsCursor implements Cursor
                 $this->keepBelow = -1;
             }
 
-            $this->ancestors->enter($node, $depth);
-            if (!$this->predicate->matches($node, $depth, $this->ancestors)) {
+            if ($this->trackAncestors) {
+                $this->ancestors->enter($node, $depth);
+            }
+            if (!(bool) ($this->test)($node, $depth, $this->ancestors)) {
                 continue;
             }
             if ($this->onMatch === OnMatch::KeepDescendants) {

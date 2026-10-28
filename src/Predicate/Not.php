@@ -19,6 +19,14 @@ final readonly class Not implements Predicate
         $this->predicate = Callback::of($predicate);
     }
 
+    /**
+     * The negated predicate.
+     */
+    public function inner(): Predicate
+    {
+        return $this->predicate;
+    }
+
     public function matches(mixed $node, int $depth, Ancestors $ancestors): bool
     {
         return !$this->predicate->matches($node, $depth, $ancestors);

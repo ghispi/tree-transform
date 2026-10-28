@@ -20,6 +20,16 @@ final readonly class AllOf implements Predicate
         $this->predicates = array_values(array_map(Callback::of(...), $predicates));
     }
 
+    /**
+     * The inner predicates.
+     *
+     * @return list<Predicate>
+     */
+    public function predicates(): array
+    {
+        return $this->predicates;
+    }
+
     public function matches(mixed $node, int $depth, Ancestors $ancestors): bool
     {
         foreach ($this->predicates as $predicate) {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Source;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Internal\Rows;
 
 /**
  * Reads a pre-order list of (depth, node) entries: the interchange format of this library.
@@ -40,6 +39,6 @@ final readonly class DepthListSource implements Source
 
     public function open(): Cursor
     {
-        return new DepthListCursor(Rows::iterator($this->entries), $this->keyed);
+        return new DepthListCursor($this->entries, $this->keyed);
     }
 }

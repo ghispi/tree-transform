@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Source;
 
 use Ghispi\TreeTransform\Accessor\Accessor;
+use Ghispi\TreeTransform\Accessor\ArrayKeyAccessor;
 use Ghispi\TreeTransform\Accessor\AutoAccessor;
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Internal\Rows;
 
 /**
  * Reads nested set rows ordered by left value (and by root first, when several trees share the rows).
@@ -34,12 +34,16 @@ final readonly class NestedSetSource implements Source
     {
         $fields = $this->fields;
 
+        // Array rows read through the default accessors are read inline, without a closure call per field.
+        $inline = $this->accessor instanceof ArrayKeyAccessor || $this->accessor instanceof AutoAccessor;
+
         return new NestedSetCursor(
-            Rows::iterator($this->rows),
+            $this->rows,
             $this->accessor->reader($fields->left),
             $this->accessor->reader($fields->right),
             $fields->root === null ? null : $this->accessor->reader($fields->root),
             $fields,
+            $inline,
         );
     }
 
