@@ -1,7 +1,7 @@
 # tree-transform — Specification (v0.2)
 
-> Status: **agreed baseline**, decisions recorded in §14. Items marked **[DEFERRED]** are decided during
-> implementation.
+> Status: **implemented design reference** for 0.x — decisions in §14. User documentation lives in
+> [docs/index.md](index.md).
 > Package `ghispi/tree-transform`, namespace `Ghispi\TreeTransform\`, PHP `>=8.4`.
 
 ## 1. Purpose
@@ -136,19 +136,21 @@ Implementations: `ArrayKeyAccessor` (`$row['lft']`), `PropertyAccessor` (public 
 specialised fast path that reads keys inline (benchmarked in Phase 0).
 
 Field names are configured with small readonly value objects, e.g.
-`new NestedSetFields(left: 'lft', right: 'rgt', level: 'lvl', root: 'root')`, with presets such as
-`NestedSetFields::gedmo()`.
+`new NestedSetFields(left: 'lft', right: 'rgt', root: 'root')`, with presets such as `NestedSetFields::gedmo()`.
+The default accessor is `AutoAccessor` (arrays, `ArrayAccess`, public properties, getters, private properties —
+resolved once per class), so most users never configure one.
 
 ## 4. Sources
 
 | Source | Input requirement | Depth from | `skipSubtree()` cost | Memory |
 |---|---|---|---|---|
-| `NestedSetSource` | ordered by `(root, lft)` | `level` field, else stack of open `rgt` values | skips rows with `lft < rgt(current)` without evaluating them | O(depth) |
-| `MaterializedPathSource` | ordered by `path` (binary collation!) | `level` field, else separator count | skips rows with matching path prefix | O(depth) |
+| `NestedSetSource` | ordered by `(root, lft)` | stack of open `rgt` values (no level column needed; any subset of a nested set works) | skips rows with `lft < rgt(current)` without evaluating them | O(depth) |
+| `MaterializedPathSource` | ordered by `path` (binary collation!) | stack of open path prefixes | skips rows with matching path prefix | O(depth) |
 | `NestedArraySource` | nested arrays / iterables / Doctrine collections | stack | does not descend | O(depth) |
 | `PreorderedAdjacencySource` | rows already in pre-order with `parent` (e.g. Gedmo nested set queried with parent) | stack of ids | skips by depth | O(depth) |
 | `AdjacencyListSource` | any order | built index | does not descend | **O(n)** (index of int offsets, no objects) |
-| `DepthListSource` | `iterable<int depth, node>` or `[depth, node]` pairs | given | skips by depth | O(1) |
+| `DepthListSource` | `DepthListSource::keyed()` (depth => node) or `::pairs()` (`[depth, node]`) | given | skips by depth | O(1) |
+| `LazySource` | a factory `fn (): Source` called on every `open()` — makes DB queries/generators re-readable | — | — | — |
 
 Details:
 
@@ -157,11 +159,14 @@ Details:
   `OrphanPolicy::AsRoot | Drop | Throw` (default `Throw`).
 - **Cycles** (adjacency): nodes unreachable from any root are reported; default throws `CycleDetected`.
 - **Sibling order**: input order by default; adjacency source accepts an optional sort field.
-- **Materialized path gotcha**: pre-order holds only if the separator sorts before every id character under the
-  DB collation. Locale/ICU collations may ignore punctuation — the docs recommend binary collation (`COLLATE "C"`,
-  `utf8mb4_bin`). Strict mode detects ordering violations.
-- **Validation**: cheap checks always on (depth contract, `lft < rgt`); deep checks (interval nesting, ordering)
-  enabled with `strict: true`. Errors are exceptions implementing `Ghispi\TreeTransform\Exception\TreeTransformException`.
+- **Materialized path**: a row that is not below any open row starts a new root, so a subtree (common prefix) can
+  be read alone. Below a root a missing parent throws, unless `allowGaps: true` attaches the row to its nearest
+  present ancestor. With every path ending in the separator, byte-wise ordering always yields pre-order; the real
+  risk is locale/ICU collations that ignore punctuation — the docs recommend binary collation (`COLLATE "C"`,
+  `utf8mb4_bin`). Ordering violations below a root are detected.
+- **Validation** is always on and cheap: integer `lft`/`rgt`, `lft < rgt`, increasing `lft`, child intervals inside
+  the parent; depth contract for depth lists; duplicate ids, cycles and orphans for adjacency lists. Errors are
+  exceptions implementing `Ghispi\TreeTransform\Exception\TreeTransformException`.
 
 ## 5. Filter strategies
 
@@ -263,6 +268,8 @@ All strategies and stages are open for extension: users implement `FilterStrateg
 `Predicate` plus composable implementations: `Callback` (wraps a closure), `AllOf`, `AnyOf`, `Not`, `DepthRange`,
 `FieldEquals`, `FieldIn`. The facade accepts plain closures with one to three parameters — PHP ignores extra
 arguments, so `fn (array $n) => $n['visible']` works as well as `fn ($n, int $depth, Ancestors $a) => …`.
+User-facing closure parameters are typed as plain `\Closure` in docblocks (signatures documented in prose):
+a `Closure(mixed, …)` type would make PHPStan reject closures with narrower parameter types such as `array $n`.
 
 **Ancestor access (lazy).** Every predicate receives an `Ancestors` view of the current node's ancestors, root first:
 
@@ -313,12 +320,16 @@ $tree->filter(fn (array $n, int $d, Ancestors $a) => $n['published'] && $a->ever
 Building nested arrays uses a stack of child lists that are attached to the parent when a level closes — no PHP
 references, relying on copy-on-write.
 
-**Objects as payload** **[DEFERRED — decided when `NestedArraySink` is implemented]**: sinks cannot add a
-`children` key to an entity, and must not mutate it. Requirements: easy for the common case, typed (PHPStan
-generics), no entity mutation. Candidates: a readonly `TreeNode { mixed $data; list<TreeNode> $children }`
-wrapper by default; an optional node factory `fn(mixed $node, array $children, int $depth): mixed` for custom shapes
-(DTOs, view models); or steering users to `map()` objects to arrays first. The chosen approach and the reasons go
-into this section and the docs.
+**Objects as payload (decided)**: sinks never mutate payloads.
+
+- `NestedArraySink`: array payloads get the children key (a copy — PHP copy-on-write); object payloads are wrapped
+  in a readonly `TreeNode { mixed $node; list<mixed> $children }` (countable, iterable, `isLeaf()`); a node factory
+  `fn (mixed $node, list<mixed> $children, int $depth): mixed` builds any other shape (DTOs, view models).
+- `AdjacencyListSink` / `NestedSetSink`: arrays get the fields set; objects need a node factory, otherwise an
+  `InvalidArgumentException` explains to pass one or `map()` to arrays first.
+
+Why: arrays — the common case and the Gedmo bridge default — just work; entities get a typed wrapper instead of an
+error; nothing is mutated, so Doctrine never flushes accidental changes; full control stays one closure away.
 
 ## 8. Facade
 
@@ -336,16 +347,24 @@ $menu = Tree::fromNestedSet($rows, NestedSetFields::gedmo())
     ->toNestedArray(childrenKey: 'children');
 ```
 
-Named constructors: `fromNestedSet`, `fromAdjacencyList`, `fromMaterializedPath`, `fromNestedArray`, `from(Source)`.
-Terminals: `toNestedArray`, `toAdjacencyList`, `toNestedSet`, `iterate`, `count`, `into(Sink)`.
+Named constructors: `fromNestedSet`, `fromAdjacencyList`, `fromPreorderedAdjacencyList`, `fromMaterializedPath`,
+`fromNestedArray`, `fromDepthList`, `lazy(fn () => Source)`, `from(Source)`.
+Stages: `filter`, `activeTrail`, `annotate`, `map`, `maxDepth`, `depthWindow`, `limit`, `sortSiblings`, `pipe(Stage)`.
+Outputs: `toNestedArray`, `toFlatList`, `toAdjacencyList`, `toNestedSet`, `iterate` (also `IteratorAggregate`),
+`count`, `cursor`, `into(Sink)`.
 
 The facade is sugar only; every piece is usable standalone.
 
 ## 9. Doctrine / Gedmo bridge (`Ghispi\TreeTransform\Bridge\Gedmo`)
 
+- **API**: `new GedmoTree($em)`; `tree($class, root, maxDepth, hydration, modify)`; `activeTrail($class, $active,
+  siblings, activeChildrenDepth, hydration)`; `config($class): TreeConfig`. Both return a lazy `Tree` whose query runs
+  on every read (`LazySource`).
 - **Auto-configuration**: reads the Gedmo tree configuration for an entity class (strategy and field names —
-  left/right/level/root/parent/path/separator) from the `TreeListener`, and builds the matching Source with a
-  `PrivatePropertyAccessor` (entities) or `ArrayKeyAccessor` (array hydration).
+  left/right/level/root/parent/path/separator/closure class) from the `TreeListener` found on the entity manager.
+  Structural values are selected as scalar columns next to the node (`tt_left`, `tt_parent`, …), read with an
+  `ArrayKeyAccessor`, and a `Map` stage then hands users the plain node: an array with `parent`/`root` as ids
+  (`Hydration::Arrays`, default) or the entity (`Hydration::Entities`).
 - **Efficient querying**:
   - Correct `ORDER BY` per strategy (`root, lft` / `path`).
   - Streams via `Query::toIterable()`; recommends `HYDRATE_ARRAY` (much cheaper than entities).
@@ -436,7 +455,7 @@ Every phase ships its documentation (§15) — a feature is not done until it is
 | 2 | PHP minimum | 8.4 |
 | 3 | Gedmo bridge packaging | Same package for v0.x, split before 1.0 if it grows (§9) |
 | 4 | Ancestor access in predicates | Yes, v0.1, lazy `Ancestors` view (§5.3) |
-| 5 | Output shape for object payloads | **[DEFERRED]** to `NestedArraySink` implementation; must be easy to use (§7) |
+| 5 | Output shape for object payloads | Arrays get keys set, objects wrapped in `TreeNode`, node factory for anything else (§7) |
 | 6 | `ActiveTrail` in v0.1 | Yes (§5.1.1) |
 
 ## 15. Documentation

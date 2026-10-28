@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Integration;
 
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\QueryBuilder;
 use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
 use Ghispi\TreeTransform\Bridge\Gedmo\Hydration;
 use Ghispi\TreeTransform\Bridge\Gedmo\TreeConfig;
+use Ghispi\TreeTransform\Source\NestedSetFields;
+use Ghispi\TreeTransform\Source\NestedSetSource;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
 use Ghispi\TreeTransform\Strategy\Promote;
 use Ghispi\TreeTransform\Tests\Integration\Entity\ClosureCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\NestedCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\PathCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\TestNode;
+use Ghispi\TreeTransform\Tree;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class GedmoTreeTest extends GedmoTestCase
@@ -153,5 +157,18 @@ final class GedmoTreeTest extends GedmoTestCase
 
         // Nested set rows removed in SQL: their children move up.
         self::assertSame('A .C .D ..E .F ..G H .I', self::outline($tree->iterate()));
+    }
+
+    public function testManualQueryFromDocs(): void
+    {
+        $this->persistExample(static fn(string $t, bool $v, ?TestNode $p): TestNode => new NestedCategory($t, $v, $p instanceof NestedCategory ? $p : null));
+        $query = $this->em->createQuery(
+            'SELECT c.id, c.title, c.lft, c.rgt, IDENTITY(c.root) AS root
+             FROM ' . NestedCategory::class . ' c ORDER BY root, c.lft',
+        );
+        $tree = Tree::lazy(static fn() => new NestedSetSource($query->toIterable([], AbstractQuery::HYDRATE_ARRAY), NestedSetFields::gedmo()));
+
+        self::assertSame(self::FULL, self::outline($tree->iterate()));
+        self::assertSame(9, $tree->count(), 'a lazy tree can be read twice');
     }
 }
