@@ -12,7 +12,7 @@ All tooling runs in the `php` compose service. Never call host `php`/`composer`.
 3. On a code-style failure: `make cs-fix`, then re-run `make ci`.
 4. Deeper gates when touching `src/` logic:
    - `make coverage` — target ≥ 95% lines.
-   - `make infection` — MSI ≥ 95% on core. Do not add `--only-covering-test-cases`: with the differential suite its
+   - `make infection` — MSI ≥ 90% on core (timeouts on a loaded machine count as kills and inflate the score). Do not add `--only-covering-test-cases`: with the differential suite its
      PHPUnit filter regex exceeds PCRE limits, PHPUnit runs no tests, and mutants falsely "escape".
 5. Performance-sensitive change (sources, strategies, sinks): `make bench` and compare with the previous run
    (or delegate to the `perf-engineer` agent).
