@@ -249,13 +249,14 @@ Memory: O(sum of child counts along the open path) — typically depth × branch
 wide node. The Gedmo bridge adds a pushdown query that fetches only roots, the active node's ancestors and their
 children (`parent IN (…)`) instead of the full tree.
 
-### 5.2 Further strategies (proposed, later phases)
+### 5.2 Further strategies and stages
 
 | Strategy | Use case | Notes |
 |---|---|---|
-| **`Placeholder`** | Replace each removed run with a stub node ("3 hidden items") instead of silently dropping. | Node factory supplied by user. |
-| **`SubtreeAggregate`** | Keep a node if an aggregate over its subtree satisfies a condition: "≥ k matching descendants", "category has products", sum/count thresholds. `KeepAncestors` is the k = 1 special case. | Buffers per subtree. |
-| **`MatchWithSiblings`** | Show matches plus their siblings for context (search results in a file tree). | Sibling buffering. |
+| **`MinMatches(min)`** (implemented) | Keep a node when its subtree has at least `min` matches: "categories with ≥ 3 products". `KeepAncestors` is `min = 1`. | Emits as soon as a node reaches `min`; otherwise waits for its subtree to end. |
+| **`Placeholder(factory)`** (implemented) | Like `Prune`, but each run of removed siblings becomes one stub node from `fn (int $hidden, int $depth)` ("3 hidden items"). | Streaming, O(depth). |
+| **`MatchWithSiblings`** (not planned for 0.x) | Matches plus their siblings, without siblings of ancestors. | `ActiveTrail` covers most menu/search needs; revisit on demand. |
+| **Aggregates over a field** (not planned for 0.x) | Keep a node if e.g. the sum of a field in its subtree passes a threshold. | `MinMatches` covers counting; generalise if requested. |
 | **`Reroot` / `DepthWindow(min, max)`** | "Show levels 2–3": nodes at `min` become roots, everything below `max` cut. | Stage, O(depth). |
 | **`Limit(n)`** | Stop after n output nodes — early termination stops reading the DB iterator. | Stage, O(1). |
 | **`MaxDepth(n)`** | Cut below depth n — implemented as a `Prune` on depth, so the source skips work. | Stage. |
@@ -442,7 +443,7 @@ docs/
 | **0 — spike** | Docker env, CI skeleton, benchmark harness; cursor class vs generator; inline array fast path vs accessor. Lock the internal representation. |
 | **0.1** | Cursor, all sources, `Prune` / `KeepAncestors` / `Promote` + `OnMatch`, `ActiveTrail`, predicates with lazy `Ancestors`, `iterate` / nested array / adjacency sinks, facade, differential tests, docs for all of it. |
 | **0.2** | `NestedSetSink`, `Annotate`, `Map` / `MaxDepth` / `Limit` / `DepthWindow`, Gedmo bridge (incl. `ActiveTrail` pushdown) + integration tests. |
-| **0.3** | `Placeholder`, `SubtreeAggregate`, `MatchWithSiblings`, `SortSiblings`. |
+| **0.3** | `Placeholder`, `MinMatches`, `SortSiblings`. |
 | **1.0** | API freeze, docs site, benchmark report published. |
 
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.
