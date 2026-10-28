@@ -479,6 +479,8 @@ docs/
 | **0.4** | Generator-based internal pipeline behind the `Cursor` contract, faster adjacency index (two passes, inline reads, cycle check only when a child precedes its parent). |
 | **1.0** | API freeze, docs site, benchmark report published. |
 
+Phases are not release numbers: phases 0.1–0.3 shipped in release 0.1.0, phase 0.4 in release 0.2.0.
+
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.
 
 ## 14. Decisions

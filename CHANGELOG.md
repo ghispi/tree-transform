@@ -5,9 +5,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-28
+
 ### Changed
 
-- Internal pipeline rewritten on generators (roadmap 0.4): built-in sources, strategies, stages and sinks pass nodes
+- Internal pipeline rewritten on generators (roadmap phase 0.4): built-in sources, strategies, stages and sinks pass nodes
   as one chain of generators instead of cursor objects. Pipelines run about 1.5–3× faster; the public `Cursor`,
   `Source`, `Stage`, `FilterStrategy` and `Sink` contracts are unchanged, and user implementations keep working.
 - An exception thrown while reading (by a predicate, a callback or input validation) now ends the traversal: a
@@ -57,5 +59,6 @@ First release.
   needs. Requires Doctrine ORM 3.6+ and gedmo/doctrine-extensions 3.20+ (both optional).
 - Documentation with 52 tested examples, a design specification, benchmarks, and a Docker-based development setup.
 
-[Unreleased]: https://github.com/ghispi/tree-transform/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ghispi/tree-transform/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ghispi/tree-transform/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ghispi/tree-transform/releases/tag/v0.1.0
