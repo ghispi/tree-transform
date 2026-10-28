@@ -10,12 +10,16 @@ permissions:
 
 jobs:
   checks:
-    name: PHP ${{ matrix.php }}
+    name: PHP ${{ matrix.php }} (${{ matrix.dependencies }} deps)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         php: ['8.4', '8.5']
+        dependencies: [highest]
+        include:
+          - php: '8.4'
+            dependencies: lowest
     env:
       PHP_VERSION: ${{ matrix.php }}
     steps:
@@ -23,6 +27,19 @@ jobs:
       - name: Build image
         run: make build
       - name: Install dependencies
-        run: make install
+        run: |
+          if [ "${{ matrix.dependencies }}" = "lowest" ]; then
+            docker compose run --rm php composer update --prefer-lowest --prefer-stable --no-interaction
+          else
+            make install
+          fi
       - name: Code style, static analysis, tests
         run: make ci
+
+  mutation:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make build install
+      - run: make infection

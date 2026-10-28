@@ -1,0 +1,17 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"],
+        "excludes": ["Bridge"]
+    },
+    "testFrameworkOptions": "--testsuite=unit,differential",
+    "logs": {
+        "text": "var/infection.log",
+        "summary": "var/infection-summary.log"
+    },
+    "minMsi": 85,
+    "minCoveredMsi": 90,
+    "mutators": {
+        "@default": true
+    }
+}
