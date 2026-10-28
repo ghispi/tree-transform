@@ -15,7 +15,7 @@ use Ghispi\TreeTransform\Cursor\Cursor;
 final readonly class Map implements Stage
 {
     /**
-     * @param \Closure(mixed, int): mixed $transform
+     * @param \Closure $transform
      */
     public function __construct(private \Closure $transform) {}
 

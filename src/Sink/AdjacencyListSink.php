@@ -25,7 +25,7 @@ final readonly class AdjacencyListSink implements Sink
 
     /**
      * @param mixed                                                   $rootParent parent value written for roots
-     * @param (\Closure(mixed, int|string|null, int): mixed)|null     $nodeFactory
+     * @param \Closure|null     $nodeFactory
      */
     public function __construct(
         string $idField = 'id',

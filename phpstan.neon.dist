@@ -17,3 +17,9 @@ parameters:
                 - offsetAccess.nonOffsetAccessible
             path: src/Accessor/*
             reportUnmatched: false
+        # Test entities are written by Doctrine/Gedmo, not by our code.
+        -
+            identifiers:
+                - property.onlyWritten
+                - property.unusedType
+            path: tests/Integration/Entity/*

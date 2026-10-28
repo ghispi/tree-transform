@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Stage;
 
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Predicate\Ancestors;
 use Ghispi\TreeTransform\Predicate\Callback;
 use Ghispi\TreeTransform\Predicate\Predicate;
 use Ghispi\TreeTransform\Strategy\FilterStrategy;
@@ -19,7 +18,7 @@ final readonly class Filter implements Stage
     private Predicate $predicate;
 
     /**
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate
+     * @param Predicate|\Closure $predicate
      */
     public function __construct(
         Predicate|\Closure $predicate,

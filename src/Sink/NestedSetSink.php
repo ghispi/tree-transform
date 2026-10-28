@@ -23,7 +23,7 @@ final readonly class NestedSetSink implements Sink
      * @param int                                            $levelBase   level of roots (Gedmo uses 0; some schemas 1)
      * @param bool                                           $restartPerRoot number every root's tree from 1
      *                                                                       (Gedmo with a TreeRoot field)
-     * @param (\Closure(mixed, int, int, int): mixed)|null  $nodeFactory
+     * @param \Closure|null  $nodeFactory
      */
     public function __construct(
         private string $leftField = 'lft',

@@ -18,6 +18,7 @@ use Ghispi\TreeTransform\Sink\Sink;
 use Ghispi\TreeTransform\Source\AdjacencyListFields;
 use Ghispi\TreeTransform\Source\AdjacencyListSource;
 use Ghispi\TreeTransform\Source\DepthListSource;
+use Ghispi\TreeTransform\Source\LazySource;
 use Ghispi\TreeTransform\Source\MaterializedPathFields;
 use Ghispi\TreeTransform\Source\MaterializedPathSource;
 use Ghispi\TreeTransform\Source\NestedArraySource;
@@ -120,13 +121,25 @@ final readonly class Tree implements \IteratorAggregate
      * Materialized path rows ordered by path (binary collation).
      *
      * @param iterable<mixed> $rows
+     * @param bool            $allowGaps attach rows whose parent is missing to their nearest present ancestor
      */
     public static function fromMaterializedPath(
         iterable $rows,
         MaterializedPathFields $fields = new MaterializedPathFields(),
         Accessor $accessor = new AutoAccessor(),
+        bool $allowGaps = false,
     ): self {
-        return new self(new MaterializedPathSource($rows, $fields, $accessor));
+        return new self(new MaterializedPathSource($rows, $fields, $accessor, $allowGaps));
+    }
+
+    /**
+     * Builds the source on every read, e.g. running a database query each time: one Tree, several outputs.
+     *
+     * @param \Closure(): Source $factory
+     */
+    public static function lazy(\Closure $factory): self
+    {
+        return new self(new LazySource($factory));
     }
 
     /**
@@ -157,7 +170,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Filters with a strategy (default: Prune — a non-matching node is removed with its subtree).
      *
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate fn ($node, int $depth, Ancestors $ancestors)
+     * @param Predicate|\Closure $predicate fn ($node, int $depth, Ancestors $ancestors)
      */
     public function filter(Predicate|\Closure $predicate, ?FilterStrategy $strategy = null): self
     {
@@ -167,7 +180,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Navigation menu expanded down to the active node(s), see ActiveTrail.
      *
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $isActive
+     * @param Predicate|\Closure $isActive
      */
     public function activeTrail(
         Predicate|\Closure $isActive,
@@ -181,8 +194,8 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Keeps every node and attaches its MatchState, see Annotate.
      *
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate
-     * @param (\Closure(mixed, MatchState): mixed)|null        $combine   default wraps nodes in Annotated
+     * @param Predicate|\Closure $predicate
+     * @param \Closure|null        $combine   default wraps nodes in Annotated
      */
     public function annotate(Predicate|\Closure $predicate, ?\Closure $combine = null): self
     {
@@ -192,7 +205,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Transforms each kept node: fn ($node, int $depth): mixed.
      *
-     * @param \Closure(mixed, int): mixed $transform
+     * @param \Closure $transform
      */
     public function map(\Closure $transform): self
     {
@@ -226,7 +239,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Sorts siblings with a comparator (reads the whole tree: O(n) memory).
      *
-     * @param \Closure(mixed, mixed): int $compare
+     * @param \Closure $compare
      */
     public function sortSiblings(\Closure $compare): self
     {
@@ -282,7 +295,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Nested arrays: array payloads get a children key, objects are wrapped in TreeNode.
      *
-     * @param (\Closure(mixed, list<mixed>, int): mixed)|null $nodeFactory fn ($node, array $children, int $depth)
+     * @param \Closure|null $nodeFactory fn ($node, array $children, int $depth)
      *
      * @return list<mixed>
      */
@@ -307,7 +320,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Pre-order list with parent ids pointing at each node's parent in the output.
      *
-     * @param (\Closure(mixed, int|string|null, int): mixed)|null $nodeFactory
+     * @param \Closure|null $nodeFactory
      *
      * @return list<mixed>
      */
@@ -323,7 +336,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Pre-order list with recomputed nested set values.
      *
-     * @param (\Closure(mixed, int, int, int): mixed)|null $nodeFactory
+     * @param \Closure|null $nodeFactory
      *
      * @return list<mixed>
      */

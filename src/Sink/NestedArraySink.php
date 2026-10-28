@@ -24,7 +24,7 @@ final readonly class NestedArraySink implements Sink
      *                                                                          (use "__children" for Gedmo
      *                                                                          buildTree() compatible output)
      * @param bool                                           $omitEmptyChildren leave the children key out of leaves
-     * @param (\Closure(mixed, list<mixed>, int): mixed)|null $nodeFactory
+     * @param \Closure|null $nodeFactory
      */
     public function __construct(
         private string $childrenKey = 'children',

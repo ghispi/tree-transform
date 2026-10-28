@@ -13,7 +13,7 @@ final readonly class AllOf implements Predicate
     private array $predicates;
 
     /**
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool ...$predicates
+     * @param Predicate|\Closure ...$predicates
      */
     public function __construct(Predicate|\Closure ...$predicates)
     {

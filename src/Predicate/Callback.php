@@ -10,14 +10,14 @@ namespace Ghispi\TreeTransform\Predicate;
 final readonly class Callback implements Predicate
 {
     /**
-     * @param \Closure(mixed, int, Ancestors): bool $test
+     * @param \Closure $test
      */
     public function __construct(private \Closure $test) {}
 
     /**
      * Returns the predicate unchanged, or wraps a closure.
      *
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate
+     * @param Predicate|\Closure $predicate
      */
     public static function of(Predicate|\Closure $predicate): Predicate
     {
@@ -26,6 +26,6 @@ final readonly class Callback implements Predicate
 
     public function matches(mixed $node, int $depth, Ancestors $ancestors): bool
     {
-        return ($this->test)($node, $depth, $ancestors);
+        return (bool) ($this->test)($node, $depth, $ancestors);
     }
 }

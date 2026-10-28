@@ -26,7 +26,7 @@ final readonly class Annotate implements FilterStrategy
     private \Closure $combine;
 
     /**
-     * @param (\Closure(mixed, MatchState): mixed)|null $combine
+     * @param \Closure|null $combine
      */
     public function __construct(?\Closure $combine = null)
     {

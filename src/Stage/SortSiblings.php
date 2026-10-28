@@ -15,7 +15,7 @@ use Ghispi\TreeTransform\Cursor\Cursor;
 final readonly class SortSiblings implements Stage
 {
     /**
-     * @param \Closure(mixed, mixed): int $compare
+     * @param \Closure $compare
      */
     public function __construct(private \Closure $compare) {}
 

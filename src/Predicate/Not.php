@@ -12,7 +12,7 @@ final readonly class Not implements Predicate
     private Predicate $predicate;
 
     /**
-     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate
+     * @param Predicate|\Closure $predicate
      */
     public function __construct(Predicate|\Closure $predicate)
     {

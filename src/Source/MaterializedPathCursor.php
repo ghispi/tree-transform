@@ -23,6 +23,9 @@ final class MaterializedPathCursor implements Cursor
     /** @var array<int, string> normalised paths ("a,b,") of open ancestors, indexed by depth */
     private array $open = [];
 
+    /** @var array<int, int> segment counts of open ancestors, indexed by depth */
+    private array $segments = [];
+
     private int $openCount = 0;
 
     private string $current = '';
@@ -37,6 +40,7 @@ final class MaterializedPathCursor implements Cursor
         private readonly \Iterator $rows,
         private readonly \Closure $path,
         private readonly MaterializedPathFields $fields,
+        private readonly bool $allowGaps,
     ) {}
 
     public function next(): bool
@@ -75,13 +79,18 @@ final class MaterializedPathCursor implements Cursor
                 --$this->openCount;
             }
             $segments = substr_count($key, $sep);
-            if ($segments !== $this->openCount + 1) {
-                throw InvalidTreeException::at($raw, $segments <= $this->openCount
-                    ? 'duplicate path.'
-                    : 'its parent path is missing or comes later. Order rows by path (binary collation) and include every ancestor.');
+            if ($this->openCount > 0) {
+                $parentSegments = $this->segments[$this->openCount - 1];
+                if ($segments <= $parentSegments) {
+                    throw InvalidTreeException::at($raw, 'duplicate path.');
+                }
+                if ($segments !== $parentSegments + 1 && !$this->allowGaps) {
+                    throw InvalidTreeException::at($raw, 'its parent path is missing or comes later. Order rows by path (binary collation) and include every ancestor.');
+                }
             }
 
             $this->depth = $this->openCount;
+            $this->segments[$this->openCount] = $segments;
             $this->open[$this->openCount++] = $key;
             $this->current = $key;
             $this->node = $row;

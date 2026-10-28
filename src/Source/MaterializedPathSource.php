@@ -14,8 +14,10 @@ use Ghispi\TreeTransform\Internal\Rows;
  *
  * Ordering by path gives pre-order only when the separator sorts before every character used in ids; in SQL use a
  * binary collation (PostgreSQL COLLATE "C", MySQL utf8mb4_bin), as locale collations may ignore punctuation.
- * Every row's parent path must be present before it; violations are reported. Memory: O(depth).
- * skipSubtree() skips rows by path prefix.
+ * A row that is not below any open row starts a new root, so a subtree (all paths with a common prefix) can be
+ * read on its own. Below a root, every row's parent path must be present before it, unless $allowGaps is true:
+ * then a row attaches to its nearest present ancestor (as if the missing nodes were removed with Promote).
+ * Memory: O(depth). skipSubtree() skips rows by path prefix.
  */
 final readonly class MaterializedPathSource implements Source
 {
@@ -26,6 +28,7 @@ final readonly class MaterializedPathSource implements Source
         private iterable $rows,
         private MaterializedPathFields $fields = new MaterializedPathFields(),
         private Accessor $accessor = new AutoAccessor(),
+        private bool $allowGaps = false,
     ) {}
 
     public function open(): Cursor
@@ -34,6 +37,7 @@ final readonly class MaterializedPathSource implements Source
             Rows::iterator($this->rows),
             $this->accessor->reader($this->fields->path),
             $this->fields,
+            $this->allowGaps,
         );
     }
 }
