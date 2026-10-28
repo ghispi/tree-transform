@@ -8,10 +8,16 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch or PR cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
     name: PHP ${{ matrix.php }} (${{ matrix.dependencies }} deps)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -36,10 +42,3 @@ jobs:
       - name: Code style, static analysis, tests
         run: make ci
 
-  mutation:
-    name: Mutation testing
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: make build install
-      - run: make infection

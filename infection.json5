@@ -4,7 +4,7 @@
         "directories": ["src"],
         "excludes": ["Bridge"]
     },
-    "testFrameworkOptions": "--testsuite=unit,differential",
+    "testFrameworkOptions": "--testsuite=unit,differential --exclude-group=memory",
     "logs": {
         "text": "var/infection.log",
         "summary": "var/infection-summary.log"

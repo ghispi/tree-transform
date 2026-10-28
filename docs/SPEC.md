@@ -435,7 +435,9 @@ CI compares PR benchmarks against `main` and flags regressions > 10%.
 - **PHP**: `>=8.4`; CI matrix 8.4 / 8.5, lowest + highest dependencies. 8.4 features in use where they help:
   asymmetric visibility (`public private(set)`) and property hooks for value objects, `new` without parentheses.
 - **License**: MIT. SemVer; `0.x` until the API is frozen.
-- **GitHub**: Actions for tests, static analysis, mutation, CS, benchmarks; Dependabot; `CHANGELOG.md`
+- **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
+  repositories; superseded runs are cancelled); mutation testing weekly and on demand (`mutation.yml`, ~30 min);
+  Dependabot; `CHANGELOG.md`
   (Keep a Changelog), `CONTRIBUTING.md`, `SECURITY.md`, issue/PR templates; release to Packagist.
 
 ```

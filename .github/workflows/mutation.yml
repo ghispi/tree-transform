@@ -1,0 +1,25 @@
+name: Mutation testing
+
+# Slow (about 30 minutes on a hosted runner), so not part of every push:
+# weekly, and on demand from the Actions tab. Run `make infection` locally before releases.
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation
+  cancel-in-progress: true
+
+jobs:
+  infection:
+    name: Infection
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - run: make build install
+      - run: make infection
