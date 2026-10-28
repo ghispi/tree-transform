@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Ghispi\TreeTransform\Predicate;
+
+/**
+ * Wraps a closure taking one to three arguments: fn (mixed $node, int $depth, Ancestors $ancestors): bool.
+ */
+final readonly class Callback implements Predicate
+{
+    /**
+     * @param \Closure(mixed, int, Ancestors): bool $test
+     */
+    public function __construct(private \Closure $test) {}
+
+    /**
+     * Returns the predicate unchanged, or wraps a closure.
+     *
+     * @param Predicate|\Closure(mixed, int, Ancestors): bool $predicate
+     */
+    public static function of(Predicate|\Closure $predicate): Predicate
+    {
+        return $predicate instanceof Predicate ? $predicate : new self($predicate);
+    }
+
+    public function matches(mixed $node, int $depth, Ancestors $ancestors): bool
+    {
+        return ($this->test)($node, $depth, $ancestors);
+    }
+}

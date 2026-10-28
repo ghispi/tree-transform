@@ -6,3 +6,14 @@ parameters:
     paths:
         - src
         - tests
+    ignoreErrors:
+        # Accessors exist to read fields by name from arbitrary payloads.
+        -
+            identifiers:
+                - property.dynamicName
+                - method.dynamicName
+                - property.nonObject
+                - method.nonObject
+                - offsetAccess.nonOffsetAccessible
+            path: src/Accessor/*
+            reportUnmatched: false

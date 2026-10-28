@@ -6,3 +6,4 @@
 infection.log
 /.remember/
 .claude/settings.local.json
+/.idea/
