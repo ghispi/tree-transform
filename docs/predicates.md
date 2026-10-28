@@ -199,6 +199,11 @@ The third argument is an `Ancestors` view of the node's ancestors, root first. I
 current path in a depth-indexed array it overwrites as it goes (one array write per node, O(depth) memory), and no
 list is built unless you ask for one.
 
+The filter only keeps the path when the predicate can read it: a closure that declares a third (or variadic)
+parameter, a custom `Predicate` class, or a combinator containing one of those. Closures with one or two parameters
+and the built-in field and depth predicates skip it, which saves 7–15% on large trees. So declare the parameter
+instead of reading it with `func_get_args()`.
+
 <!-- example: predicates-ancestors -->
 ```php
 use Ghispi\TreeTransform\Predicate\Ancestors;

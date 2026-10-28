@@ -177,5 +177,66 @@ Source: [`examples/performance-streaming.php`](../examples/performance-streaming
 
 ## Benchmark results
 
-> **Placeholder.** This section is filled in from the phpbench suite in `benchmarks/` (sources × strategies ×
-> sinks on balanced, wide, deep and realistic trees, 1k / 100k / 1M nodes). Until then, see `make bench`.
+Measured with the phpbench suite in [`benchmarks/`](../benchmarks/) on PHP 8.4.27, opcache on, JIT off, in Docker on
+a Linux workstation. Times are medians; "own memory" is what the operation itself allocates, without the input. Every
+compared pair is checked to produce identical output (`benchmarks/verify.php`). Re-run with `make bench`; the full
+tables and the design questions they answered are in [`benchmarks/RESULTS.md`](../benchmarks/RESULTS.md).
+
+Tree shapes: **balanced-300k** (branching 8, depth 6, 299,593 nodes), **category-100k** (a realistic shop tree with
+uneven branching), **deep-10k** (a single chain 10,000 levels deep). Filters match about 10% of nodes.
+
+### Reading a tree
+
+`count()` over each source, i.e. the raw cost of reading and validating:
+
+| Source | balanced-300k | category-100k | deep-10k | Own memory |
+|---|---|---|---|---|
+| Nested set | 80 ms (3.7M nodes/s) | 28 ms | 2.3 ms | 103 KiB |
+| Pre-ordered adjacency list | 99 ms (3.0M nodes/s) | 34 ms | 2.8 ms | 103 KiB |
+| Materialized path | 142 ms (2.1M nodes/s) | 43 ms | — | 103 KiB |
+| Nested arrays | 62 ms (4.8M nodes/s) | 30 ms | 2.7 ms | 64 KiB |
+| Adjacency list, any order | 121 ms (2.5M nodes/s) | 49 ms | 4.5 ms | 30 MiB (index) |
+
+### Filtering
+
+Over a nested set array, into `count()`:
+
+| Strategy | balanced-300k | category-100k |
+|---|---|---|
+| none | 60 ms | 22 ms |
+| `Prune` (90% kept) | 76 ms | 28 ms |
+| `Prune` (10% kept — skipped subtrees are not read) | 22 ms | 7 ms |
+| `Promote` | 92 ms | 31 ms |
+| `KeepAncestors` | 104 ms | 34 ms |
+| `ActiveTrail` (one active node) | 123 ms | 44 ms |
+| `Annotate` | 217 ms | 74 ms |
+
+### Streaming
+
+Rows from a generator through a strategy into `iterate()`. Memory stays flat while the tree grows a hundredfold:
+
+| Pipeline | 11k nodes | 111k nodes | 1.1M nodes | Peak memory |
+|---|---|---|---|---|
+| Nested set → `Prune` | 12 ms | 90 ms | 795 ms | 1.0 MiB at every size |
+| Nested set → `KeepAncestors` | 11 ms | 80 ms | 834 ms | 1.0 MiB at every size |
+| Materialized path (no filter) | 11 ms | 86 ms | 929 ms | 1.0 MiB at every size |
+
+### Compared with building the whole tree first
+
+The usual approach is to build the full nested array recursively, then filter it recursively. Same input, same
+output, `KeepAncestors` semantics:
+
+| Input, balanced-300k | Naive build-then-filter | This library |
+|---|---|---|
+| Nested set | 144 ms, 260 MiB | **122 ms, 45 MiB** |
+| Adjacency list, any order | **128 ms**, 251 MiB | 170 ms, **63 MiB** |
+
+| Input, category-100k | Naive build-then-filter | This library |
+|---|---|---|
+| Nested set | 60 ms, 96 MiB | **44 ms, 18 MiB** |
+| Adjacency list, any order | **54 ms**, 93 MiB | 65 ms, **31 MiB** |
+
+The library always uses far less memory: 3–6× less here, and constant memory when streaming. It is faster for
+inputs that arrive in tree order (nested set, materialized path, pre-ordered adjacency). For adjacency lists in
+arbitrary order it is somewhat slower, because it builds an index and checks for cycles before streaming — if you
+control the query, order it by a nested set left value or a path and use the pre-ordered source.
