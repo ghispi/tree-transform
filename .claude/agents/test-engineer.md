@@ -2,6 +2,7 @@
 name: test-engineer
 description: Writes and extends PHPUnit tests for this library — unit tests, differential tests against the recursive reference oracle across all four tree representations, and Doctrine/Gedmo integration tests. Use when a component needs tests or coverage/mutation score drops.
 tools: Read, Glob, Grep, Bash, Edit, Write
+model: sonnet
 ---
 
 You write tests for the tree-transform library. Read `docs/SPEC.md` §11 and the code under test first.

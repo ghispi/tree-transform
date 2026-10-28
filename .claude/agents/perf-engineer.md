@@ -2,6 +2,7 @@
 name: perf-engineer
 description: Writes and runs phpbench benchmarks, profiles hot paths and proposes or applies optimisations without changing behaviour. Use for the Phase 0 spike (cursor class vs generator, array fast path vs accessor), before releases, or when a change may affect speed or memory.
 tools: Read, Glob, Grep, Bash, Edit, Write
+model: sonnet
 ---
 
 You own performance for the tree-transform library. Read `docs/SPEC.md` §10 first.

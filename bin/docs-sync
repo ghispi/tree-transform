@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Regenerates examples/*.out (with --outputs) and the example blocks in README.md and docs/*.md.
+// Run inside Docker: make docs
+
+use Ghispi\TreeTransform\Tests\Docs\Support\DocsSync;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$root = dirname(__DIR__);
+
+if (in_array('--outputs', $argv, true)) {
+    foreach (glob($root . '/examples/*.php') ?: [] as $example) {
+        $output = shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($example));
+        file_put_contents(substr($example, 0, -4) . '.out', (string) $output);
+    }
+    echo "Regenerated example outputs. Review them with git diff.\n";
+}
+
+foreach ((new DocsSync($root))->pages() as $file => [, $expanded]) {
+    file_put_contents($file, $expanded);
+    echo 'Updated ', substr($file, strlen($root) + 1), "\n";
+}

@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 $finder = PhpCsFixer\Finder::create()
-    ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/benchmarks', __DIR__ . '/examples']);
+    ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/benchmarks', __DIR__ . '/examples', __DIR__ . '/bin'])
+    ->append([__DIR__ . '/bin/docs-sync']);
 
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(true)

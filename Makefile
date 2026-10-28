@@ -2,7 +2,7 @@ PHP_VERSION ?= 8.4
 DC = PHP_VERSION=$(PHP_VERSION) HOST_UID=$(shell id -u) HOST_GID=$(shell id -g) docker compose
 RUN = $(DC) run --rm php
 
-.PHONY: help build install update shell test coverage stan cs cs-fix infection bench ci
+.PHONY: help build install update shell test coverage stan cs cs-fix infection bench docs ci
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -39,5 +39,8 @@ infection: ## Mutation testing
 
 bench: ## phpbench
 	$(RUN) vendor/bin/phpbench run --report=aggregate
+
+docs: ## Regenerate example outputs and the example blocks in the docs
+	$(RUN) php bin/docs-sync --outputs
 
 ci: cs stan test ## Everything CI runs (fast part)
