@@ -4,9 +4,9 @@
 #
 #   .claude/scripts/github-api GET  pulls/12
 #   .claude/scripts/github-api POST pulls '{"title":"…","head":"branch","base":"main","body":"…"}'
-#   .claude/scripts/github-api PUT  pulls/12/merge '{"merge_method":"squash"}'
+#   .claude/scripts/github-api PUT  pulls/12/merge '{"merge_method":"squash","sha":"<head sha>"}'
 #
-# The path is relative to https://api.github.com/repos/ghispi/tree-transform/. Only for pull requests: the
+# The path is relative to https://api.github.com/repos/ghispi/tree-transform/. Only for pull requests and their checks: the
 # token has Contents and Pull requests permissions, nothing else.
 set -eu
 
@@ -17,7 +17,7 @@ data=${3-}
 token=$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill | sed -n 's/^password=//p')
 [ -n "$token" ] || { echo "github-api: no token from the git credential helper" >&2; exit 1; }
 
-set -- -sS -X "$method" \
+set -- -sS -w '%{stderr}HTTP %{http_code}\n' -X "$method" \
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "https://api.github.com/repos/ghispi/tree-transform/$path"
