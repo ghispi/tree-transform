@@ -6,7 +6,7 @@
 #   .claude/scripts/github-api POST pulls '{"title":"…","head":"branch","base":"main","body":"…"}'
 #   .claude/scripts/github-api PUT  pulls/12/merge '{"merge_method":"squash","sha":"<head sha>"}'
 #
-# The path is relative to https://api.github.com/repos/ghispi/tree-transform/. Only for pull requests: the
+# The path is relative to https://api.github.com/repos/ghispi/tree-transform/. Only for pull requests and their checks: the
 # token has Contents and Pull requests permissions, nothing else.
 set -eu
 

@@ -21,15 +21,15 @@ Push only when the user/product owner decided the change should land (see CLAUDE
    .claude/scripts/github-api POST pulls "$(python3 -c 'import json,sys; print(json.dumps({"title":sys.argv[1],"head":sys.argv[2],"base":"main","body":sys.argv[3]}))' "<title>" "<topic>" "<body>")" \
      | python3 -c 'import json,sys; p=json.load(sys.stdin); print(p.get("number"), p.get("html_url"), p.get("message",""))'
    ```
-5. **Wait for checks** — once after ~5 minutes, not in a loop (public API, no token). Query by commit hash: the
-   branch-name form of this endpoint has returned HTTP 500.
+5. **Wait for checks** — once after ~5 minutes, not in a loop. Use the token: the unauthenticated check-runs
+   endpoint has returned HTTP 500 for this repository for minutes at a time, the authenticated one has not.
    ```bash
-   curl -sL "https://api.github.com/repos/ghispi/tree-transform/commits/$(git rev-parse HEAD)/check-runs" \
+   .claude/scripts/github-api GET commits/$(git rev-parse HEAD)/check-runs 2>/dev/null \
      | python3 -c 'import json,sys; [print(c["name"], c["status"], c["conclusion"]) for c in json.load(sys.stdin)["check_runs"]]'
    ```
    On a failure, use the `ci-status` skill to reproduce it locally; fix, push to the same branch.
 6. **Merge** (squash; the PR title becomes the commit subject). Always pass the head hash whose checks you saw
-   green: GitHub then refuses to merge anything newer, and without it the endpoint has returned HTTP 500.
+   green: GitHub then refuses to merge anything newer (a merge without it once returned HTTP 500).
    ```bash
    .claude/scripts/github-api PUT pulls/<n>/merge "{\"merge_method\":\"squash\",\"sha\":\"$(git rev-parse HEAD)\"}"
    ```
