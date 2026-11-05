@@ -29,7 +29,7 @@ jobs:
           args=""
           if [ -n "$FILTER" ]; then args="--filter=$FILTER"; fi
           docker compose run --rm php vendor/bin/phpbench run --report=aggregate --dump-file=var/bench.xml $args | tee var/bench.txt
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: benchmarks
           path: |
