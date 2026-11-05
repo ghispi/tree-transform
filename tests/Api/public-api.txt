@@ -187,7 +187,8 @@ final readonly class Source\NestedSetFields
   property readonly string $right
   property readonly ?string $root
   property readonly ?string $level
-  __construct(string $left = 'lft', string $right = 'rgt', ?string $root = NULL, ?string $level = NULL)
+  property readonly string $id
+  __construct(string $left = 'lft', string $right = 'rgt', ?string $root = NULL, ?string $level = NULL, string $id = 'id')
   static gedmo(): Source\NestedSetFields
 
 final readonly class Source\NestedSetSource implements Source\Source

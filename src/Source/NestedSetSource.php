@@ -53,6 +53,7 @@ final readonly class NestedSetSource implements Source, StreamSource
             $this->accessor->reader($fields->left),
             $this->accessor->reader($fields->right),
             $fields->root === null ? null : $this->accessor->reader($fields->root),
+            $this->accessor->reader($fields->id),
             $fields,
             // Array rows read through the default accessors are read inline, without a closure call per field.
             $this->accessor instanceof ArrayKeyAccessor || $this->accessor instanceof AutoAccessor,
@@ -64,6 +65,7 @@ final readonly class NestedSetSource implements Source, StreamSource
      * @param \Closure(mixed): mixed        $readLeft
      * @param \Closure(mixed): mixed        $readRight
      * @param (\Closure(mixed): mixed)|null $readRoot
+     * @param \Closure(mixed): mixed        $readId   only called to name the node in an error
      *
      * @return \Generator<int, mixed, bool|null, void>
      */
@@ -72,6 +74,7 @@ final readonly class NestedSetSource implements Source, StreamSource
         \Closure $readLeft,
         \Closure $readRight,
         ?\Closure $readRoot,
+        \Closure $readId,
         NestedSetFields $fields,
         bool $inline,
     ): \Generator {
@@ -117,10 +120,10 @@ final readonly class NestedSetSource implements Source, StreamSource
             }
 
             if ($left >= $right) {
-                throw InvalidTreeException::at(null, \sprintf('left value %d is not lower than right value %d.', $left, $right));
+                throw InvalidTreeException::at(self::idOf($row, $readId), \sprintf('left value %d is not lower than right value %d.', $left, $right));
             }
             if ($left <= $lastLeft) {
-                throw InvalidTreeException::at(null, \sprintf(
+                throw InvalidTreeException::at(self::idOf($row, $readId), \sprintf(
                     'left value %d does not increase (previous %d). Order rows by %s%s.',
                     $left,
                     $lastLeft,
@@ -132,7 +135,7 @@ final readonly class NestedSetSource implements Source, StreamSource
                 --$open;
             }
             if ($open > 0 && $right >= $rights[$open - 1]) {
-                throw InvalidTreeException::at(null, \sprintf(
+                throw InvalidTreeException::at(self::idOf($row, $readId), \sprintf(
                     'interval %d..%d overlaps its parent interval ending at %d.',
                     $left,
                     $right,
@@ -148,5 +151,25 @@ final readonly class NestedSetSource implements Source, StreamSource
                 $skipBefore = $right;
             }
         }
+    }
+
+    /**
+     * The row's id for an error message, or null when it has none (errors must not fail on the id itself).
+     *
+     * @param \Closure(mixed): mixed $readId
+     */
+    private static function idOf(mixed $row, \Closure $readId): int|string|null
+    {
+        try {
+            $id = $readId($row);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return match (true) {
+            \is_int($id), \is_string($id) => $id,
+            $id instanceof \Stringable => (string) $id,
+            default => null,
+        };
     }
 }

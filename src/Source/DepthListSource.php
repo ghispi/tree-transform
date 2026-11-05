@@ -66,13 +66,18 @@ final readonly class DepthListSource implements Source, StreamSource
     {
         $previous = -1;
         $skipBelow = -1;
+        $position = 0;
         foreach ($entries as $key => $entry) {
+            ++$position;
             if ($keyed) {
                 $depth = $key;
                 $node = $entry;
             } else {
                 if (!\is_array($entry)) {
-                    throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].');
+                    throw InvalidTreeException::at(null, \sprintf(
+                        'entry %d: entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].',
+                        $position,
+                    ));
                 }
                 if (\array_key_exists(0, $entry) && \array_key_exists(1, $entry)) {
                     [$depth, $node] = $entry;
@@ -80,12 +85,16 @@ final readonly class DepthListSource implements Source, StreamSource
                     $depth = $entry['depth'];
                     $node = $entry['node'];
                 } else {
-                    throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].');
+                    throw InvalidTreeException::at(null, \sprintf(
+                        'entry %d: entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].',
+                        $position,
+                    ));
                 }
             }
             if (!\is_int($depth) || $depth < 0 || $depth > $previous + 1) {
                 throw InvalidTreeException::at(null, \sprintf(
-                    'depth %s cannot follow depth %d (expected 0..%d).',
+                    'entry %d: depth %s cannot follow depth %d (expected 0..%d).',
+                    $position,
                     var_export($depth, true),
                     $previous,
                     $previous + 1,

@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `NestedSetFields` takes an `id` field name (default `'id'`, last parameter). `NestedSetSource` reads it only to
+  name the offending row in an `InvalidTreeException`; the Gedmo bridge sets it to the entity id.
+
+### Changed
+
+- Nested set errors (left not below right, left values not increasing, overlapping intervals) now report the row's
+  id in `nodeId()` and the message instead of `null`. Depth list errors still have no id to report (entries carry
+  arbitrary nodes); their message now starts with the entry's position, e.g. `entry 3: depth 2 cannot follow …`.
+
 ## [1.0.0] - 2026-11-05
 
 The first stable release. The public API ([docs/api.md](docs/api.md)) is frozen: minor and patch releases don't break

@@ -6,6 +6,7 @@ namespace Ghispi\TreeTransform\Tests\Integration;
 
 use Doctrine\ORM\QueryBuilder;
 use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
+use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Tests\Integration\Entity\ClosureCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpNoSep;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpRoot;
@@ -91,5 +92,19 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
         // B removed in SQL: C and D move up to depth 1, so they are within maxDepth 1.
         self::assertSame('A .C .D .F H .I', self::outline($tree->iterate()));
+    }
+
+    public function testBrokenNestedSetErrorsNameTheEntityId(): void
+    {
+        $nodes = $this->persistExample(static fn(string $t, bool $v, ?TestNode $p): TestNode => new NestedCategory($t, $v, $p instanceof NestedCategory ? $p : null));
+        // C's interval now reaches past its parent B's.
+        $this->em->createQuery(\sprintf('UPDATE %s n SET n.rgt = 100 WHERE n.title = \'C\'', NestedCategory::class))->execute();
+
+        try {
+            (new GedmoTree($this->em))->tree(NestedCategory::class)->count();
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertEquals($nodes['C']->getId(), $e->nodeId());
+        }
     }
 }

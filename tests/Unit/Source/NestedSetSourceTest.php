@@ -95,20 +95,20 @@ final class NestedSetSourceTest extends TestCase
     }
 
     /**
-     * @return array<string, array{0: list<array<string, mixed>>, 1: string}>
+     * @return array<string, array{0: list<array<string, mixed>>, 1: string, 2: string|null}>
      */
     public static function invalidInputs(): array
     {
         return [
-            'left equals right' => [[self::n('a', 1, 1)], 'left value 1 is not lower than right value 1'],
-            'left above right' => [[self::n('a', 5, 2)], 'left value 5 is not lower than right value 2'],
-            'unordered left values' => [[self::n('a', 1, 6), self::n('c', 4, 5), self::n('b', 2, 3)], 'does not increase'],
-            'duplicate left value' => [[self::n('a', 1, 6), self::n('b', 2, 3), self::n('c', 2, 5)], 'does not increase'],
-            'overlapping intervals' => [[self::n('a', 1, 5), self::n('b', 2, 7)], 'overlaps its parent interval ending at 5'],
-            'child sharing its parent\'s right value' => [[self::n('a', 1, 4), self::n('b', 2, 4)], 'interval 2..4 overlaps its parent interval ending at 4'],
-            'non-numeric left' => [[self::n('a', 'x', 2)], 'Field "lft" must be an integer'],
-            'missing right' => [[['id' => 'a', 'lft' => 1]], 'Field "rgt" must be an integer, got null'],
-            'float left' => [[['id' => 'a', 'lft' => 1.0, 'rgt' => 2]], 'got float'],
+            'left equals right' => [[self::n('a', 1, 1)], 'left value 1 is not lower than right value 1', 'a'],
+            'left above right' => [[self::n('a', 5, 2)], 'left value 5 is not lower than right value 2', 'a'],
+            'unordered left values' => [[self::n('a', 1, 6), self::n('c', 4, 5), self::n('b', 2, 3)], 'does not increase', 'b'],
+            'duplicate left value' => [[self::n('a', 1, 6), self::n('b', 2, 3), self::n('c', 2, 5)], 'does not increase', 'c'],
+            'overlapping intervals' => [[self::n('a', 1, 5), self::n('b', 2, 7)], 'overlaps its parent interval ending at 5', 'b'],
+            'child sharing its parent\'s right value' => [[self::n('a', 1, 4), self::n('b', 2, 4)], 'interval 2..4 overlaps its parent interval ending at 4', 'b'],
+            'non-numeric left' => [[self::n('a', 'x', 2)], 'Field "lft" must be an integer', null],
+            'missing right' => [[['id' => 'a', 'lft' => 1]], 'Field "rgt" must be an integer, got null', null],
+            'float left' => [[['id' => 'a', 'lft' => 1.0, 'rgt' => 2]], 'got float', null],
         ];
     }
 
@@ -116,12 +116,91 @@ final class NestedSetSourceTest extends TestCase
      * @param list<array<string, mixed>> $rows
      */
     #[DataProvider('invalidInputs')]
-    public function testInvalidInputIsReported(array $rows, string $message): void
+    public function testInvalidInputIsReported(array $rows, string $message, ?string $nodeId): void
     {
-        $this->expectException(InvalidTreeException::class);
-        $this->expectExceptionMessage($message);
+        try {
+            self::read($rows);
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertStringContainsString($message, $e->getMessage());
+            self::assertSame($nodeId, $e->nodeId());
+            if ($nodeId !== null) {
+                self::assertStringContainsString("node '{$nodeId}'", $e->getMessage());
+            }
+        }
+    }
 
-        self::read($rows);
+    public function testErrorsNameTheNodeByTheConfiguredIdField(): void
+    {
+        $rows = [['key' => 7, 'lft' => 1, 'rgt' => 4], ['key' => new class implements \Stringable {
+            public function __toString(): string
+            {
+                return 'eight';
+            }
+        }, 'lft' => 2, 'rgt' => 5]];
+
+        try {
+            self::read($rows, new NestedSetFields(id: 'key'));
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertSame('eight', $e->nodeId());
+        }
+    }
+
+    public function testIntegerIdsAreReportedAsIntegers(): void
+    {
+        try {
+            self::read([['id' => 5, 'lft' => 2, 'rgt' => 1]]);
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertSame(5, $e->nodeId());
+        }
+    }
+
+    /**
+     * @return array<string, array{0: array<string, mixed>}>
+     */
+    public static function unusableIds(): array
+    {
+        return [
+            'no id field' => [['lft' => 2, 'rgt' => 1]],
+            'array id' => [['id' => [1], 'lft' => 2, 'rgt' => 1]],
+            'null id' => [['id' => null, 'lft' => 2, 'rgt' => 1]],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    #[DataProvider('unusableIds')]
+    public function testRowsWithoutAUsableIdReportNull(array $row): void
+    {
+        try {
+            self::read([$row]);
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertNull($e->nodeId());
+            self::assertStringContainsString('left value 2 is not lower than right value 1', $e->getMessage());
+        }
+    }
+
+    public function testAnIdReaderThatThrowsDoesNotHideTheError(): void
+    {
+        $accessor = new class implements \Ghispi\TreeTransform\Accessor\Accessor {
+            public function reader(string $field): \Closure
+            {
+                return static fn(mixed $node): mixed => $field === 'id'
+                    ? throw new \RuntimeException('no id')
+                    : (\is_array($node) ? $node[$field] : null);
+            }
+        };
+
+        try {
+            Trees::pairs(new NestedSetSource([['lft' => 2, 'rgt' => 1]], accessor: $accessor));
+            self::fail('Expected an InvalidTreeException.');
+        } catch (InvalidTreeException $e) {
+            self::assertNull($e->nodeId());
+        }
     }
 
     public function testOrderingHintMentionsRootField(): void

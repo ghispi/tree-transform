@@ -1,7 +1,7 @@
 ## source: nested set
 0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
 ## error: nested set, rows not ordered by lft
-throws InvalidTreeException {"nodeId":null}
+throws InvalidTreeException {"nodeId":"H"}
 ## source: nested set with level and root fields
 0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
 ## source: adjacency list, shuffled, sibling order
@@ -161,9 +161,9 @@ throws InvalidTreeException {"nodeId":"A,"}
 ## sink: input rows are not modified
 {"unchanged":true}
 ## error: nested set, rgt before lft
-throws InvalidTreeException {"nodeId":null}
+throws InvalidTreeException {"nodeId":"A"}
 ## error: nested set, overlapping intervals
-throws InvalidTreeException {"nodeId":null}
+throws InvalidTreeException {"nodeId":"B"}
 ## error: adjacency list, cycle
 throws CycleDetectedException {"ids":["A","B"]}
 ## error: adjacency list, orphan
