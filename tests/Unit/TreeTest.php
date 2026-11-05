@@ -20,6 +20,15 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(Tree::class)]
 final class TreeTest extends TestCase
 {
+    public function testDepthWindowDefaultsKeepTheWholeTree(): void
+    {
+        $tree = Tree::from(RunningExample::source());
+
+        self::assertSame(Trees::compactOf($tree), Trees::compactOf($tree->depthWindow()));
+        self::assertSame('A[B, F], H[I]', Trees::compactOf($tree->depthWindow(max: 1)));
+        self::assertSame('B[C, D[E]], F[G], I', Trees::compactOf($tree->depthWindow(1)));
+    }
+
     public function testEveryMethodReturnsANewInstanceAndLeavesTheOriginalUnchanged(): void
     {
         $base = Tree::from(RunningExample::source());

@@ -451,9 +451,22 @@ as an artifact) and with `make bench` on a quiet machine before releases.
   and PostgreSQL 17 (`make test-db`, CI job `databases`; the databases run as Compose services, selected with
   `TT_DATABASE_URL`).
 - **Static analysis**: PHPStan level max (+ strict rules), full generics in docblocks.
-- **Mutation testing**: Infection, MSI ≥ 90% on `src/` (excluding bridge; measured 91% with 4 threads — on a heavily loaded machine extra
-  timeouts inflate it, and most escapes are performance-only paths such as inline fast paths and skips that
-  do not change output); run without `--only-covering-test-cases` (its PHPUnit filter regex grows too large for the differential suite).
+- **Mutation testing**: Infection, MSI ≥ 90% on `src/` (excluding bridge); run without `--only-covering-test-cases`
+  (its PHPUnit filter regex grows too large for the differential suite). Infection runs only tests that declare
+  coverage, so `#[CoversNothing]` differential tests kill nothing; `tests/Unit/Strategy/ExhaustiveStrategyTest`
+  covers the strategies instead, comparing every forest of up to five nodes and every set of matching nodes with the
+  oracle (output, predicate calls, downstream skips; `TREE_TRANSFORM_EXHAUSTIVE_NODES=7` for a deeper manual run).
+  Timeouts count as killed; on a loaded machine they inflate the score. Reviewed for 1.0 (0.3.0): the remaining
+  escapes (89 of 1407, MSI 93.7%) are equivalent mutants, all surviving the exhaustive test at seven nodes, in these classes:
+  1. **Sentinel values**: `-1` → `-2` or `0` on "none" markers (`skipBelow`, `keepBelow`, `top`, `deepest`, offsets)
+     that are only compared with `>= 0`, or are only set at depth 0 before any deeper node is read.
+  2. **Redundant casts**: `(bool)` removed inside an `if` condition.
+  3. **Scratch state**: dead stores and loop bounds on buffers that are reset on arrival or only bound a flush loop.
+  4. **Work-saving skips**: forwarding `skipSubtree()` or breaking out of a flush early, which avoids reading nodes
+     but cannot change output.
+  5. **Interchangeable forms**: `break`/`continue` at a loop's end, offsets used only as unique ids, `floor`/`ceil`/
+     `round` on integral floats, `??=` caches, `ucfirst` on case-insensitive method names, `true`/`false` in maps
+     read only with `isset`, fast-path early returns, regex anchors where `===` already decided.
 - **Code style**: PHP-CS-Fixer with `@PER-CS2.0`.
 - **Coverage**: ≥ 95% line coverage (PCOV).
 
@@ -509,7 +522,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 | 1 | **API audit** (done).  List every public symbol (classes, methods, constructor parameters — named arguments make parameter names part of the API — enum cases, exception classes). Check naming consistency across `Tree`, sources, strategies, stages, sinks and the bridge; that `final`/`readonly` is applied; that every `Internal\*` type and `@internal` method stays out of public signatures. Independent review by `tree-semantics-reviewer`. | `docs/api.md` lists the public API; renames/removals done, each in `CHANGELOG.md` with the migration | 0.3.0 |
 | 2 | **BC policy** (done).  Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
 | 3 | **Spec matches CI** (done).  §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
-| 4 | **Mutation survivors.** Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
+| 4 | **Mutation survivors** (done). Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
 | 5 | **Benchmark report.** Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
 | 6 | **Docs site.** Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
 | 7 | **Upgrade guide and release.** `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
