@@ -5,8 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-05
+
+The first stable release. The public API ([docs/api.md](docs/api.md)) is frozen: minor and patch releases don't break
+it. No breaking changes since 0.3.0; [UPGRADE.md](UPGRADE.md) covers upgrading from 0.1, 0.2 and 0.3.
+
 ### Added
 
+- [UPGRADE.md](UPGRADE.md): moving from 0.1, 0.2 and 0.3 to 1.0, with before/after code for every break.
 - [Benchmark report](docs/benchmarks.md): the full matrix on PHP 8.4 and 8.5, JIT off and on, with hardware, method,
   the SPEC §10 targets with a verdict each, and `make bench-report` to reproduce it
   (`benchmarks/run-report.sh`, `benchmarks/render-report.php`).
@@ -126,7 +132,8 @@ First release.
   needs. Requires Doctrine ORM 3.6+ and gedmo/doctrine-extensions 3.20+ (both optional).
 - Documentation with 52 tested examples, a design specification, benchmarks, and a Docker-based development setup.
 
-[Unreleased]: https://github.com/ghispi/tree-transform/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ghispi/tree-transform/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ghispi/tree-transform/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/ghispi/tree-transform/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ghispi/tree-transform/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ghispi/tree-transform/releases/tag/v0.1.0

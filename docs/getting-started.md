@@ -9,8 +9,6 @@ composer require ghispi/tree-transform
 PHP 8.4 or newer. The library has no runtime dependencies. Doctrine ORM 3 and `gedmo/doctrine-extensions` 3 are
 only needed for the [Gedmo bridge](gedmo.md).
 
-The library is pre-1.0 (`0.x`): minor versions can still change the API.
-
 ## First filter
 
 You have categories stored as a nested set, and want a menu of the visible ones. A hidden category hides

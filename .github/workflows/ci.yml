@@ -73,7 +73,7 @@ jobs:
           from=$(git describe --tags --abbrev=0)
           case "$from" in
             v0.1.*|v0.2.*)
-              # Releases before the API review (0.3.0) are not a baseline: report only.
+              # Releases before the API review (0.3.0) are not a baseline: report only. From 1.0 every break fails.
               echo "::notice::Comparing with $from, which predates the API freeze; breaks are reported, not enforced."
               make bc-check BC_FROM="$from" || true
               ;;

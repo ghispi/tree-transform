@@ -14,7 +14,7 @@ All classes are under `Ghispi\TreeTransform\`. **Role** says how you use a type:
 
 From 1.0.0 the library follows [Semantic Versioning](https://semver.org/): a minor or patch release does not break
 code that uses the API on this page as documented. A break needs a new major version and an entry in
-`UPGRADE.md`. Before 1.0, a minor release (0.x → 0.y) may break the API, and the changelog says how to migrate.
+`UPGRADE.md`. The 0.x releases could break the API in a minor release; `UPGRADE.md` covers moving from them to 1.0.
 
 What the promise covers:
 

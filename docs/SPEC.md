@@ -1,6 +1,6 @@
-# tree-transform — Specification (v0.2)
+# tree-transform — Specification (v1.0)
 
-> Status: **implemented design reference** for 0.x — decisions in §14. User documentation lives in
+> Status: **implemented design reference** for 1.x — decisions in §14. User documentation lives in
 > [docs/index.md](index.md).
 > Package `ghispi/tree-transform`, namespace `Ghispi\TreeTransform\`, PHP `>=8.4`.
 
@@ -406,7 +406,7 @@ The facade is sugar only; every piece is usable standalone.
 - **Output compatibility**: `__children` preset to match `buildTree()` output.
 - Supported: `doctrine/orm ^3.6` (streams mixed entity/scalar results), `gedmo/doctrine-extensions ^3.20`. ODM MaterializedPath works via the generic sources.
 
-**Packaging (decided):** the bridge ships in this package for v0.x. Doctrine and Gedmo are `suggest` + dev
+**Packaging (decided):** the bridge ships in this package. Doctrine and Gedmo are `suggest` + dev
 dependencies only; bridge classes are inert unless used, and `conflict` rules exclude unsupported major versions.
 It stays in this package for 1.0 (§14 decision 3); a split into `ghispi/tree-transform-gedmo` happens only if it
 needs runtime dependencies of its own.
@@ -477,7 +477,8 @@ shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do no
   except Docker. CI uses the same image.
 - **PHP**: `>=8.4`; CI matrix 8.4 / 8.5, lowest + highest dependencies. 8.4 features in use where they help:
   asymmetric visibility (`public private(set)`) and property hooks for value objects, `new` without parentheses.
-- **License**: MIT. SemVer; `0.x` until the API is frozen. Compatibility promise and what it covers:
+- **License**: MIT. SemVer since 1.0: minor and patch releases don't break the public API; a break needs a major
+  release and a section in `UPGRADE.md`. Compatibility promise and what it covers:
   [docs/api.md](api.md#compatibility-promise), guarded by the API snapshot test (`tests/Api`) and the Roave BC
   checker (CI job `bc`, `make bc-check`; report-only while the latest tag predates 0.3.0).
 - **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
@@ -518,7 +519,7 @@ zensical.toml
 | **0.4** | Generator-based internal pipeline behind the `Cursor` contract, faster adjacency index (two passes, inline reads, cycle check only when a child precedes its parent). |
 | **1.0** | API freeze, docs site, benchmark report published (plan: §13.1). |
 
-Phases are not release numbers: phases 0.1–0.3 shipped in release 0.1.0, phase 0.4 in release 0.2.0, phase 1.0 steps 1–4 in release 0.3.0.
+Phases are not release numbers: phases 0.1–0.3 shipped in release 0.1.0, phase 0.4 in release 0.2.0, phase 1.0 steps 1–4 in release 0.3.0, steps 5–7 in 1.0.0.
 
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.
 
@@ -536,7 +537,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 | 4 | **Mutation survivors** (done). Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
 | 5 | **Benchmark report** (done). Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
 | 6 | **Docs site** (done; live since 2026-11-05). Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
-| 7 | **Upgrade guide and release.** `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
+| 7 | **Upgrade guide and release** (done). `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
 
 Order: 1 → 2 (the policy needs the audited surface), 3 and 4 in parallel with them, 0.3.0, then 5 and 6 in parallel,
 then 7.

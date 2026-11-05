@@ -3,7 +3,8 @@
 Streaming filtering and transformation of PHP trees — nested set, adjacency list, materialized path and nested
 arrays — with pluggable filter strategies and Gedmo Doctrine support.
 
-> Pre-1.0 (`0.x`): the API can still change between minor versions.
+> Stable since 1.0: minor and patch releases don't break the [public API](docs/api.md). Upgrading from 0.x:
+> [UPGRADE.md](UPGRADE.md).
 
 ## Install
 

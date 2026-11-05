@@ -5,8 +5,8 @@ adjacency list, materialized path, nested arrays, Doctrine entities), runs it th
 and writes the result in the shape you need. Where the input allows, it does this in one streaming pass: memory
 grows with the depth of the tree, not with its size.
 
-The library is pre-1.0 (`0.x`). The API can still change between minor versions; see the
-[changelog](../CHANGELOG.md).
+The API is stable since 1.0: minor and patch releases don't break it ([what that covers](api.md#compatibility-promise)).
+Changes are in the [changelog](../CHANGELOG.md); upgrading from 0.x is in [UPGRADE.md](../UPGRADE.md).
 
 ## Pages
 
