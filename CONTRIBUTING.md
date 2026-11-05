@@ -25,9 +25,11 @@ Use another PHP version with `PHP_VERSION=8.5 make build install ci`.
   `make docs-site` builds the documentation site into `var/docs-site/site` and fails on broken links.
 - Add a line to `CHANGELOG.md` under `[Unreleased]`.
 - Public API changes follow the [compatibility promise](docs/api.md#compatibility-promise). If `make ci` fails in
-  the `api` suite, the public API changed. If that was intended, run `make api-snapshot`, commit the diff of
-  `tests/Api/public-api.txt` and update `docs/api.md`. `make bc-check` compares with the latest release; since 1.0
-  a break needs a new major version.
+  the `api` suite, the public API or its behaviour changed. If that was intended, run `make api-snapshot`, commit
+  the diff of `tests/Api/public-api.txt` / `tests/Api/behaviour.txt` and update `docs/api.md`. `make bc-check` and
+  `make behaviour-check` compare with the latest release; since 1.0 a break needs a new major version, and a bug
+  fix that changes released behaviour is listed in `tests/Api/behaviour-changes.txt`.
+- A new public feature gets cases in `tests/Api/Behaviour.php` (inputs written out there, not taken from fixtures).
 - New strategies and sources follow the design in `docs/SPEC.md`: streaming where possible, no recursion, no
   per-node objects, never modify the input. Differential tests compare them with the simple reference
   implementations in `tests/Fixtures`.

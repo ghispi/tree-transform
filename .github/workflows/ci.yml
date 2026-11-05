@@ -81,3 +81,5 @@ jobs:
               make bc-check BC_FROM="$from"
               ;;
           esac
+      - name: Behaviour compared with the latest release
+        run: make behaviour-check BC_FROM="$(git describe --tags --abbrev=0)"

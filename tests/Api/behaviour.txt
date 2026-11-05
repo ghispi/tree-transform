@@ -1,0 +1,198 @@
+## source: nested set
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## error: nested set, rows not ordered by lft
+throws InvalidTreeException {"nodeId":null}
+## source: nested set with level and root fields
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: adjacency list, shuffled, sibling order
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: adjacency list, input order is sibling order
+0:H 1:I 0:A 1:F 2:G 1:B 2:D 3:E 2:C
+## source: pre-ordered adjacency list
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: materialized path
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## error: materialized path, rows not ordered by path
+throws InvalidTreeException {"nodeId":"A,"}
+## source: nested array
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: depth list
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: flat list
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## source: empty
+(empty)
+## source: single node
+0:X
+## filter: Prune EvaluateDescendants
+0:A
+## filter: KeepAncestors EvaluateDescendants
+0:A 1:B 2:C 2:D 3:E 0:H 1:I
+## filter: Promote EvaluateDescendants
+0:A 1:C 1:E 0:I
+## filter: Placeholder EvaluateDescendants
+0:A 1:"2 hidden at 1" 0:"1 hidden at 0"
+## filter: Prune KeepDescendants
+0:A 1:B 2:C 2:D 3:E 1:F 2:G
+## filter: KeepAncestors KeepDescendants
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## filter: Promote KeepDescendants
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:I
+## filter: Placeholder KeepDescendants
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:"1 hidden at 0"
+## filter: Prune DropDescendants
+0:A
+## filter: KeepAncestors DropDescendants
+0:A 0:H 1:I
+## filter: Promote DropDescendants
+0:A 0:I
+## filter: Placeholder DropDescendants
+0:A 0:"1 hidden at 0"
+## filter: default strategy
+0:A
+## filter: nothing matches
+(empty)
+## filter: everything matches
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## filter: MinMatches 1
+0:A 1:B 2:C 2:D 3:E 0:H 1:I
+## filter: MinMatches 2
+0:A 1:B
+## filter: MinMatches 3
+0:A
+## filter: MinMatches 4
+(empty)
+## filter: depth argument
+0:A 0:H
+## filter: ancestors argument
+0:A 1:B 1:F 2:G 0:H 1:I
+## annotate: default
+0:A(match) 1:B(ancestor) 2:C(match) 2:D(ancestor) 3:E(match) 1:F(descendant) 2:G(descendant) 0:H(ancestor) 1:I(match)
+## annotate: combine
+0:"A=match" 1:"B=ancestor" 2:"C=match" 2:"D=ancestor" 3:"E=match" 1:"F=descendant" 2:"G=descendant" 0:"H=ancestor" 1:"I=match"
+## annotate: as strategy
+0:A(ancestor) 1:B(ancestor) 2:C(none) 2:D(match) 3:E(descendant) 1:F(none) 2:G(none) 0:H(none) 1:I(none)
+## activeTrail: E
+0:A 1:B 2:C 2:D 3:E 1:F 0:H
+## activeTrail: E, no siblings
+0:A 1:B 2:D 3:E
+## activeTrail: C
+0:A 1:B 2:C 2:D 1:F 0:H
+## activeTrail: C, no siblings
+0:A 1:B 2:C
+## activeTrail: A
+0:A 1:B 1:F 0:H
+## activeTrail: A, no siblings
+0:A 1:B 1:F
+## activeTrail: G+I
+0:A 1:B 1:F 2:G 0:H 1:I
+## activeTrail: G+I, no siblings
+0:A 1:F 2:G 0:H 1:I
+## activeTrail: none
+0:A 0:H
+## activeTrail: none, no siblings
+(empty)
+## activeTrail: B, activeChildrenDepth 0
+0:A 1:B 1:F 0:H
+## activeTrail: B, activeChildrenDepth 2
+0:A 1:B 2:C 2:D 3:E 1:F 0:H
+## activeTrail: G+I, single
+0:A 1:B 1:F 2:G 0:H
+## activeTrail: as strategy
+0:A 1:B 2:D 3:E
+## maxDepth: 0
+0:A 0:H
+## maxDepth: 1
+0:A 1:B 1:F 0:H 1:I
+## maxDepth: 2
+0:A 1:B 2:C 2:D 1:F 2:G 0:H 1:I
+## depthWindow: 1-2
+0:B 1:C 1:D 0:F 1:G 0:I
+## depthWindow: 2-9223372036854775807
+0:C 0:D 1:E 0:G
+## depthWindow: 0-0
+0:A 0:H
+## depthWindow: 3-3
+0:E
+## limit: 0
+(empty)
+## limit: 1
+0:A
+## limit: 4
+0:A 1:B 2:C 2:D
+## limit: 100
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## sortSiblings: descending id
+0:H 1:I 0:A 1:F 2:G 1:B 2:D 3:E 2:C
+## sortSiblings: stable for ties
+0:A 1:B 2:C 2:D 3:E 1:F 2:G 0:H 1:I
+## map: depth into the node
+0:"A@0" 1:"B@1" 2:"C@2" 2:"D@2" 3:"E@3" 1:"F@1" 2:"G@2" 0:"H@0" 1:"I@1"
+## chain: filter, maxDepth, limit
+0:A 1:B 0:H
+## chain: sortSiblings, filter Promote, map
+0:"i" 0:"a" 1:"e" 1:"c"
+## chain: depthWindow then activeTrail
+0:B 1:C 1:D 2:E 0:F 0:I
+## chain: filter twice
+0:A 1:B 2:C 0:H 1:I
+## sink: toNestedArray
+[{"id":"A","match":true,"children":[{"id":"B","match":false,"children":[{"id":"C","match":true,"children":[]},{"id":"D","match":false,"children":[{"id":"E","match":true,"children":[]}]}]}]},{"id":"H","match":false,"children":[{"id":"I","match":true,"children":[]}]}]
+## sink: toNestedArray, omitEmptyChildren, childrenField
+[{"id":"A","match":true,"kids":[{"id":"B","match":false,"kids":[{"id":"C","match":true},{"id":"D","match":false,"kids":[{"id":"E","match":true}]}]}]},{"id":"H","match":false,"kids":[{"id":"I","match":true}]}]
+## sink: toNestedArray, nodeFactory
+[{"A":[{"B":[]},{"F":[]}]},{"H":[{"I":[]}]}]
+## sink: toNestedArray of scalars
+[{"node":"A","children":[{"node":"B","children":[]},{"node":"F","children":[]}]},{"node":"H","children":[{"node":"I","children":[]}]}]
+## sink: toFlatList
+[{"depth":0,"node":{"id":"A","match":true}},{"depth":1,"node":{"id":"C","match":true}},{"depth":1,"node":{"id":"E","match":true}},{"depth":0,"node":{"id":"I","match":true}}]
+## sink: toAdjacencyList
+[{"id":"A","match":true,"parent_id":null},{"id":"C","match":true,"parent_id":"A"},{"id":"E","match":true,"parent_id":"A"},{"id":"I","match":true,"parent_id":null}]
+## sink: toAdjacencyList, fields and rootParent
+[{"id":"A","match":true,"up":0},{"id":"B","match":false,"up":"A"},{"id":"F","match":false,"up":"A"},{"id":"H","match":false,"up":0},{"id":"I","match":true,"up":"H"}]
+## sink: toNestedSet
+[{"id":"A","match":true,"lft":1,"rgt":10,"lvl":0},{"id":"B","match":false,"lft":2,"rgt":9,"lvl":1},{"id":"C","match":true,"lft":3,"rgt":4,"lvl":2},{"id":"D","match":false,"lft":5,"rgt":8,"lvl":2},{"id":"E","match":true,"lft":6,"rgt":7,"lvl":3},{"id":"H","match":false,"lft":11,"rgt":14,"lvl":0},{"id":"I","match":true,"lft":12,"rgt":13,"lvl":1}]
+## sink: toNestedSet, levelBase 1, gedmo fields
+[{"id":"A","match":true,"lft":1,"rgt":6,"lvl":1,"root":"A"},{"id":"B","match":false,"lft":2,"rgt":3,"lvl":2,"root":"A"},{"id":"F","match":false,"lft":4,"rgt":5,"lvl":2,"root":"A"},{"id":"H","match":false,"lft":1,"rgt":4,"lvl":1,"root":"H"},{"id":"I","match":true,"lft":2,"rgt":3,"lvl":2,"root":"H"}]
+## sink: count
+7
+## sink: iterate keys are depths
+["0:A","1:B","1:F","0:H","1:I"]
+## sink: input rows are not modified
+{"unchanged":true}
+## error: nested set, rgt before lft
+throws InvalidTreeException {"nodeId":null}
+## error: nested set, overlapping intervals
+throws InvalidTreeException {"nodeId":null}
+## error: adjacency list, cycle
+throws CycleDetectedException {"ids":["A","B"]}
+## error: adjacency list, orphan
+throws OrphanNodeException {"parentId":"missing","childCount":1}
+## adjacency list, orphan as root
+0:A 1:B 0:X 1:Y
+## adjacency list, orphan dropped
+0:A 1:B
+## error: adjacency list, duplicate id
+throws InvalidTreeException {"nodeId":"A"}
+## error: pre-ordered adjacency list, child before parent
+throws InvalidTreeException {"nodeId":"B"}
+## error: materialized path, gap
+throws InvalidTreeException {"nodeId":"A,B,C,"}
+## materialized path, gap allowed
+0:A 1:C 0:D
+## error: depth list, depth jumps by two
+throws InvalidTreeException {"nodeId":null}
+## error: flat list, first depth not 0
+throws InvalidTreeException {"nodeId":null}
+## error: generator source read twice
+throws LogicException
+## error: limit -1
+throws InvalidArgumentException
+## error: maxDepth -1
+throws InvalidArgumentException
+## error: depthWindow 3-1
+throws InvalidArgumentException
+## error: MinMatches 0
+throws InvalidArgumentException
+## error: activeTrail activeChildrenDepth -1
+throws InvalidArgumentException

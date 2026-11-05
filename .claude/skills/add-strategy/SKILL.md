@@ -21,6 +21,8 @@ description: Checklist for adding or changing a filter strategy (FilterStrategy)
 3. **Oracle.** Add the naive recursive version to `tests/Fixtures/Oracle/Oracle.php` first.
 4. **Tests.** Unit: running example for every supported `OnMatch` mode and the edge cases; skip forwarding with
    `SpyCursor`. Differential: register it in the strategy/stage oracle tests and the chained-pipeline test.
+   Behaviour: add cases to `tests/Api/Behaviour.php` (every option and `OnMatch` mode, plus each invalid argument)
+   and run `make api-snapshot`; a changed existing case is a BC question, not a snapshot refresh (SPEC §11).
 5. **Facade.** A `Tree` method only for common cases; otherwise `filter($p, new Name())` / `pipe(new Name())`.
 6. **Finish.** Benchmark subject in `benchmarks/StrategyBench.php` if on a hot path; `run-checks`; a
    `tree-semantics-reviewer` pass; docs and a tested example via `write-docs` (incl. `CHANGELOG.md`).

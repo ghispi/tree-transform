@@ -34,10 +34,13 @@ What the promise covers:
   versions. It may drop a version only once that version no longer gets security fixes upstream.
 - **Final classes**: classes are `final`. Wrap or compose them, don't extend them. Removing `final` is not a break.
 
-Two checks guard the promise on every push. `tests/Api/public-api.txt` records the API from reflection, so any
-change to it, parameter renames included, shows up as a diff (`make api-snapshot` updates it). The
-[Roave BC checker](https://github.com/Roave/BackwardCompatibilityCheck) compares with the latest release
-(`make bc-check`).
+Three checks guard the promise on every push. `tests/Api/public-api.txt` records the API from reflection, so any
+change to it, parameter renames included, shows up as a diff. `tests/Api/behaviour.txt` does the same for the
+behaviour above: the nodes, depths and order of every source, strategy and stage on a fixed tree, the sink output,
+and the exception class for each kind of bad input (`make api-snapshot` updates both). The
+[Roave BC checker](https://github.com/Roave/BackwardCompatibilityCheck) compares the API with the latest release
+(`make bc-check`), and `make behaviour-check` compares the behaviour with that release's snapshot: a changed case
+fails unless it is a bug fix listed in `tests/Api/behaviour-changes.txt`.
 
 ## Not part of the API
 
