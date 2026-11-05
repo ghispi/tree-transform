@@ -1,0 +1,33 @@
+name: Dependabot auto-merge
+
+# Turns on auto-merge (squash) for Dependabot's patch and minor updates. GitHub merges once the required checks of
+# the main ruleset pass; a failing check leaves the PR open. Major updates are left for a person to review.
+# Needs Settings → General → Pull Requests → "Allow auto-merge".
+#
+# Merges made with GITHUB_TOKEN do not start other workflows, so CI does not run again on main after such a merge;
+# the required checks already ran on the PR head.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.repository == 'ghispi/tree-transform'
+    steps:
+      - name: Read the update
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+      - name: Auto-merge patch and minor updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Leave major updates for review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: echo "::notice::Major update (${{ steps.metadata.outputs.dependency-names }}); review and merge by hand."
