@@ -12,6 +12,8 @@ description: Check GitHub Actions results for ghispi/tree-transform without the 
   latest tag). All five are required checks on `main`. Superseded runs are cancelled; 20-minute job limit.
 - `.github/workflows/docs.yml` — `Build site` on PRs and pushes touching docs (not required), deploy on `v*` tags.
 - `.github/workflows/benchmarks.yml` — on demand only; uploads the phpbench report as an artifact.
+- `.github/workflows/dependabot-auto-merge.yml` — on Dependabot PRs: auto-merge (squash) for patch and minor
+  updates; majors get a notice and wait for review. Its merges don't re-run CI on `main`.
 - `.github/workflows/mutation.yml` — Mondays 04:00 UTC and on demand (Actions tab → Run workflow): `make infection`,
   60-minute limit (a local 4-thread run, like a hosted runner, takes ~18 min). Standard hosted runners are free for this public repository.
 

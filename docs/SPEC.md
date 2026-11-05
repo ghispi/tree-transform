@@ -492,7 +492,7 @@ shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do no
   against the latest release's snapshot (same job, `make behaviour-check`; from the first release that has one).
 - **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
   repositories; superseded runs are cancelled); mutation testing weekly and on demand (`mutation.yml`, ~30 min); benchmarks on demand (`benchmarks.yml`);
-  documentation site on GitHub Pages (`docs.yml`, below); Dependabot; `CHANGELOG.md`
+  documentation site on GitHub Pages (`docs.yml`, below); Dependabot, with patch and minor updates auto-merged once the required checks pass (`dependabot-auto-merge.yml`); `CHANGELOG.md`
   (Keep a Changelog), `CONTRIBUTING.md`, `SECURITY.md`, issue/PR templates; release to Packagist.
 - **Docs site**: https://ghispi.github.io/tree-transform/, built from `docs/*.md` with
   [Zensical](https://zensical.org) (`zensical.toml`, image `docker/docs`, version pinned in

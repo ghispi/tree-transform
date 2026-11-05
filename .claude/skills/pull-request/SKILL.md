@@ -37,4 +37,6 @@ Push only when the user/product owner decided the change should land (see CLAUDE
    GitHub deletes the branch. Locally: `git switch main && git pull --ff-only && git branch -D <topic>`
    (`-D`: squashing means git does not see the branch as merged).
 
-Dependabot PRs: merge the same way once their checks are green.
+Dependabot PRs: patch and minor updates merge themselves (`dependabot-auto-merge.yml` turns on auto-merge; GitHub
+merges when the required checks pass). Major updates wait: review the changelog of the dependency, then merge the
+same way as above.
