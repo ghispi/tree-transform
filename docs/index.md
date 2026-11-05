@@ -21,7 +21,8 @@ The library is pre-1.0 (`0.x`). The API can still change between minor versions;
 | [Doctrine and Gedmo](gedmo.md) | Loading Gedmo trees from Doctrine ORM, efficient queries, pushdown |
 | [Recipes](recipes.md) | Menus, breadcrumbs, search, select boxes, empty categories, re-rooting, highlighting |
 | [Extending](extending.md) | Your own Source, FilterStrategy, Stage, Sink, Predicate, Accessor |
-| [Performance](performance.md) | Memory and speed model, benchmark results, tips |
+| [Performance](performance.md) | Memory and speed model, tips |
+| [Benchmarks](benchmarks.md) | Measured speed and memory on PHP 8.4 and 8.5, JIT off and on, against a naive baseline; how to reproduce |
 | [Public API](api.md) | Every public type and what you do with it; what is not covered by SemVer |
 
 ## Concepts

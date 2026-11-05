@@ -413,26 +413,27 @@ needs runtime dependencies of its own.
 
 ## 10. Performance
 
-### Targets (calibrated in Phase 0 on PHP 8.4, JIT off)
+### Targets (calibrated in Phase 0; status from the 0.3.0 report, [docs/benchmarks.md](benchmarks.md))
 
 | Target | Status |
 |---|---|
 | Streaming strategies: peak memory independent of n (asserted in tests: 1.1M nodes under 2 MB growth) | met |
-| ≥ 1M nodes/s for `Prune` over an array nested set | met (5–30M nodes/s since 0.4) |
-| Much lower memory than a naive "build the full tree, then filter" baseline | met (2–9× lower) |
-| Faster than that baseline for pre-ordered inputs (nested set → `KeepAncestors` → nested array) | met (~1.9–2.3× since 0.4) |
-| ≥ 2× faster than the naive baseline | met with the generator pipeline (0.4) for nested set → `KeepAncestors` → nested array: 1.9× balanced-300k, 2.1× wide-100k, 2.3× category-100k |
+| ≥ 1M nodes/s for `Prune` over an array nested set | met (JIT off: 5.6–7.7M nodes/s at ~90 % kept, 29–47M at ~10 %; JIT on: 10–13M and 34–112M; PHP 8.4 and 8.5) |
+| Much lower memory than a naive "build the full tree, then filter" baseline | met (own peak 5.4–11.3× lower for nested set → `KeepAncestors` except the deep chain at 1.9×; 1.9–3.6× for adjacency → `Prune`) |
+| Faster than that baseline for pre-ordered inputs (nested set → `KeepAncestors` → nested array) | met (1.05–2.28× JIT off, 1.5–2.7× JIT on, every shape and configuration) |
+| ≥ 2× faster than the naive baseline | **partly met**: nested set → `KeepAncestors` → nested array is ≥ 2× on the large shapes with the JIT on (2.46–2.73×) and, JIT off, on balanced-300k (2.0×), wide-100k (2.0× on 8.4, 1.97× on 8.5) and category-100k (2.1–2.3×); not on balanced-37k with the JIT off (1.86–1.93×), the 1k shapes (1.43–1.96×) or the 10k deep chain (1.05–1.70×) |
 
-Adjacency lists in arbitrary order stay close to the naive baseline (`KeepAncestors` 1.1–1.3× faster, `Prune` about
-0.9×: index build, and a cycle check when a child comes before its parent); use
-`PreorderedAdjacencySource` or a nested set when speed matters.
+Adjacency lists in arbitrary order stay close to the naive baseline (index build, and a cycle check when a child comes before its parent); use
+`PreorderedAdjacencySource` or a nested set when speed matters. (0.3.0 report: `KeepAncestors` 0.86–1.25× the naive speed, `Prune` 0.57–0.97× with the JIT off, up to 1.7× / 1.3× with it on.)
 
 ### Benchmarks (phpbench)
 
 Shapes: balanced (branching 8, depth 6), wide (1 root × 100k children), deep chain (depth 10k — also proves
-no recursion limits), realistic category tree. Sizes 1k / 100k / 1M. Matrix over sources × strategies × sinks.
+no recursion limits), realistic category tree. Sizes 1k / 37k / 100k / 300k in memory, 11k / 111k / 1.1M streaming. Matrix over sources × strategies × sinks.
 Hosted CI runners are too noisy to gate on a 10% regression, so benchmarks run on demand (`benchmarks.yml`, report
-as an artifact) and with `make bench` on a quiet machine before releases.
+as an artifact) and with `make bench` on a quiet machine before releases. The published report is
+[docs/benchmarks.md](benchmarks.md), produced by `make bench-report` (PHP 8.4 and 8.5, JIT off and on; in-memory
+shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do not fit the benchmark memory limit).
 
 ### Implementation rules
 
@@ -523,7 +524,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 | 2 | **BC policy** (done).  Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
 | 3 | **Spec matches CI** (done).  §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
 | 4 | **Mutation survivors** (done). Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
-| 5 | **Benchmark report.** Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
+| 5 | **Benchmark report** (done). Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
 | 6 | **Docs site.** Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
 | 7 | **Upgrade guide and release.** `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
 
@@ -557,7 +558,8 @@ docs/
   stages.md            map, maxDepth, limit, …
   outputs.md           every sink, output shapes
   gedmo.md             Doctrine/Gedmo setup, efficient queries, pushdown
-  performance.md       memory/speed model, benchmark results, tips
+  performance.md       memory/speed model, tips
+  benchmarks.md        benchmark report: environment, method, targets, results
   recipes.md           menus, breadcrumbs, search-in-tree, select boxes, category pruning
   extending.md         writing your own Source, Strategy, Stage, Sink
   SPEC.md              this file (design reference, not user docs)

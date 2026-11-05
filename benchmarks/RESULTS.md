@@ -569,3 +569,12 @@ PHP 8.4.27, opcache on, JIT off. Times per revolution: median [min – max] over
 | ActiveTrailSingle | category-1k x100 | 41.6 ms [40.6 ms – 43.5 ms] | 2.41M [2.30M – 2.47M] | 1.7 MiB | 124 KiB |
 | ActiveTrailSingle | category-100k | 43.6 ms [43.0 ms – 46.1 ms] | 2.29M [2.17M – 2.32M] | 79.5 MiB | 124 KiB |
 
+## 2026-11-05: 0.3.0 benchmark report
+
+The full matrix on PHP 8.4.27 and 8.5.12, JIT off and on, is published as [docs/benchmarks.md](../docs/benchmarks.md)
+(hardware, settings, method, targets, tables; reproduce with `make bench-report`). Compared with the 0.4 table above
+(same machine, JIT off), nothing regressed: read, `Prune`, `KeepAncestors`, `Promote`, `iterate()`, materialized path
+and adjacency reads are within ±3 %, `Annotate` +4 to +6 % (slower), `ActiveTrail` (one active node) +6 % on balanced-300k and -1 % on category-100k, `toNestedArray()` within ±2 %, nested set → `KeepAncestors` → nested array 5 to 10 % faster; streaming `Prune` over 1.1M rows
+measured 561 to 607 ms in four repeats against 550 ms then (generating the rows alone varied 362 to 386 ms between
+runs, so this is within the noise of that benchmark). The report's runs leave pcov out of the benchmark processes
+(it prevents the JIT from starting); the older runs above had it loaded but disabled.

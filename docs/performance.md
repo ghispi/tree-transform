@@ -177,66 +177,10 @@ Source: [`examples/performance-streaming.php`](../examples/performance-streaming
 
 ## Benchmark results
 
-Measured with the phpbench suite in [`benchmarks/`](../benchmarks/) on PHP 8.4.27, opcache on, JIT off, in Docker on
-a Linux workstation. Times are medians; "own memory" is what the operation itself allocates, without the input. Every
-compared pair is checked to produce identical output (`benchmarks/verify.php`). Re-run with `make bench`; the full
-tables and the design questions they answered are in [`benchmarks/RESULTS.md`](../benchmarks/RESULTS.md).
-
-Tree shapes: **balanced-300k** (branching 8, depth 6, 299,593 nodes), **category-100k** (a realistic shop tree with
-uneven branching), **deep-10k** (a single chain 10,000 levels deep). Filters match about 10% of nodes.
-
-### Reading a tree
-
-`count()` over each source, i.e. the raw cost of reading and validating:
-
-| Source | balanced-300k | category-100k | deep-10k | Own memory |
-|---|---|---|---|---|
-| Nested set | 31 ms (9.8M nodes/s) | 11 ms | 0.9 ms | 105 KiB |
-| Pre-ordered adjacency list | 48 ms (6.2M nodes/s) | 17 ms | 1.2 ms | 105 KiB |
-| Materialized path | 85 ms (3.5M nodes/s) | 28 ms | — | 105 KiB |
-| Nested arrays | 35 ms (8.5M nodes/s) | 20 ms | 1.5 ms | 97 KiB |
-| Adjacency list, any order | 67 ms (4.5M nodes/s) | 27 ms | 2.1 ms | 35 MiB (index) |
-
-### Filtering
-
-Over a nested set array, into `count()`:
-
-| Strategy | balanced-300k | category-100k |
-|---|---|---|
-| none | 28 ms | 10 ms |
-| `Prune` (90% kept) | 39 ms | 16 ms |
-| `Prune` (10% kept — skipped subtrees are not read) | 10 ms | 3.5 ms |
-| `Promote` | 48 ms | 17 ms |
-| `KeepAncestors` | 51 ms | 19 ms |
-| `ActiveTrail` (one active node) | 66 ms | 26 ms |
-| `Annotate` | 133 ms | 44 ms |
-
-### Streaming
-
-Rows from a generator through a strategy into `iterate()`. Memory stays flat while the tree grows a hundredfold:
-
-| Pipeline | 11k nodes | 111k nodes | 1.1M nodes | Peak memory |
-|---|---|---|---|---|
-| Nested set → `Prune` | 9 ms | 62 ms | 550 ms | 1.0 MiB at every size |
-| Nested set → `KeepAncestors` | 9 ms | 62 ms | 583 ms | 1.0 MiB at every size |
-| Materialized path (no filter) | 8.5 ms | 70 ms | 737 ms | 1.0 MiB at every size |
-
-### Compared with building the whole tree first
-
-The usual approach is to build the full nested array recursively, then filter it recursively. Same input, same
-output, `KeepAncestors` semantics:
-
-| Input, balanced-300k | Naive build-then-filter | This library |
-|---|---|---|
-| Nested set | 148 ms, 260 MiB | **76 ms, 45 MiB** |
-| Adjacency list, any order | 134 ms, 251 MiB | **121 ms, 63 MiB** |
-
-| Input, category-100k | Naive build-then-filter | This library |
-|---|---|---|
-| Nested set | 59 ms, 96 MiB | **26 ms, 18 MiB** |
-| Adjacency list, any order | 57 ms, 93 MiB | **45 ms, 31 MiB** |
-
-The library always uses far less memory: 3–6× less here, and constant memory when streaming. It is about 2× faster
-for inputs that arrive in tree order (nested set, materialized path, pre-ordered adjacency), and slightly faster for
-adjacency lists in arbitrary order (about as fast as naive code for `Prune`), where it first builds an index (and checks for cycles when a child comes before
-its parent). If you control the query, order it by a nested set left value or a path and use the pre-ordered source.
+The numbers live in one place, [Benchmarks](benchmarks.md): speed and memory of every source, strategy and sink on
+PHP 8.4 and 8.5 with the JIT off and on, a comparison with building the whole tree first and filtering it, the
+hardware and settings, the command to reproduce them, and the performance targets with a verdict each. In short: a
+nested set is read at about 10M nodes per second, `Prune` runs at 6M to 8M nodes per second (twice that with the
+JIT), streaming a million rows takes about a second in 1 MiB, and nested set → `KeepAncestors` → nested array is
+about 2× faster (2.5× with the JIT) and uses 5× to 11× less memory than the naive build-then-filter code. Pre-ordered inputs are the
+fast path; adjacency lists in arbitrary order build an index first and are about as fast as the naive code.

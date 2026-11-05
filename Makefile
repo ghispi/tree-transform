@@ -2,7 +2,7 @@ PHP_VERSION ?= 8.4
 DC = PHP_VERSION=$(PHP_VERSION) HOST_UID=$(shell id -u) HOST_GID=$(shell id -g) docker compose
 RUN = $(DC) run --rm php
 
-.PHONY: help build install update shell test coverage stan cs cs-fix infection bench docs test-db db-down api-snapshot bc-check ci
+.PHONY: help build install update shell test coverage stan cs cs-fix infection bench bench-report docs test-db db-down api-snapshot bc-check ci
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -47,6 +47,13 @@ infection: ## Mutation testing
 
 bench: ## phpbench
 	$(RUN) vendor/bin/phpbench run --report=aggregate
+
+bench-report: ## Full benchmark matrix on PHP 8.4 and 8.5, JIT off and on (~35 min, quiet machine); rewrites the tables in docs/benchmarks.md
+	@for v in 8.4 8.5; do for j in off on; do \
+		echo "== PHP $$v, JIT $$j"; \
+		PHP_VERSION=$$v HOST_UID=$$(id -u) HOST_GID=$$(id -g) docker compose run --rm php sh benchmarks/run-report.sh $$j var/bench-report/php$$v-jit-$$j.xml || exit 1; \
+	done; done
+	$(RUN) php benchmarks/render-report.php var/bench-report docs/benchmarks.md
 
 docs: ## Regenerate example outputs and the example blocks in the docs
 	$(RUN) php bin/docs-sync --outputs

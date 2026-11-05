@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- [Benchmark report](docs/benchmarks.md): the full matrix on PHP 8.4 and 8.5, JIT off and on, with hardware, method,
+  the SPEC §10 targets with a verdict each, and `make bench-report` to reproduce it
+  (`benchmarks/run-report.sh`, `benchmarks/render-report.php`).
+
 ## [0.3.0] - 2026-11-05
 
 The API review before 1.0 (roadmap phase 1.0, steps 1–4). This is the API 1.0 is meant to freeze; all public

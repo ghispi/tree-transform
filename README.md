@@ -93,6 +93,10 @@ Source: [`examples/getting-started-quickstart.php`](examples/getting-started-qui
   rewritten parents, nested sets with recomputed `lft` / `rgt`, counts.
 - **Streaming**: for pre-ordered inputs, memory grows with tree depth, not size. Predicates never run inside a
   pruned subtree. Input is never modified.
+- **Fast and small**: on PHP 8.4 a nested set is read at about 10M nodes per second and filtered with `Prune` at
+  6M to 8M (10M to 13M with the JIT); a million rows from a generator stream through in about 1 MiB; nested set →
+  `KeepAncestors` → nested array is about 2× faster (2.5× with the JIT) and uses 5× to 11× less memory than building the whole tree and
+  then filtering it. Method, hardware and every number: [Benchmarks](docs/benchmarks.md).
 - **Doctrine / Gedmo bridge**: reads the Gedmo tree configuration, streams rows with the right `ORDER BY`, and pushes
   subtree, depth and active-trail limits into SQL.
 - **Extensible**: write your own Source, FilterStrategy, Stage, Sink, Predicate or Accessor.
@@ -105,7 +109,7 @@ Source: [`examples/getting-started-quickstart.php`](examples/getting-started-qui
   [Stages](docs/stages.md) · [Outputs](docs/outputs.md)
 - [Doctrine and Gedmo](docs/gedmo.md)
 - [Recipes](docs/recipes.md) — menus, breadcrumbs, search, select boxes, empty categories
-- [Extending](docs/extending.md) · [Performance](docs/performance.md)
+- [Extending](docs/extending.md) · [Performance](docs/performance.md) · [Benchmarks](docs/benchmarks.md)
 
 Every example in the docs is a runnable script in [`examples/`](examples), checked by the test suite.
 
