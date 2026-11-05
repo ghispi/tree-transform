@@ -67,14 +67,14 @@ final class DepthListSourceTest extends TestCase
     public static function invalidPairs(): array
     {
         return [
-            'first depth not 0' => [[[1, self::n('a')]], 'depth 1 cannot follow depth -1 (expected 0..0)'],
-            'jump by two' => [[[0, self::n('a')], [2, self::n('b')]], 'depth 2 cannot follow depth 0 (expected 0..1)'],
+            'first depth not 0' => [[[1, self::n('a')]], 'entry 1: depth 1 cannot follow depth -1 (expected 0..0)'],
+            'jump by two' => [[[0, self::n('a')], [2, self::n('b')]], 'entry 2: depth 2 cannot follow depth 0 (expected 0..1)'],
             'negative' => [[[0, self::n('a')], [-1, self::n('b')]], 'depth -1 cannot follow'],
             'string depth' => [[['0', self::n('a')]], "depth '0' cannot follow"],
             'not a pair' => [[self::n('a')], 'entries must be [depth, node] pairs'],
-            'scalar entry' => [['x'], 'entries must be [depth, node] pairs'],
+            'scalar entry' => [[[0, self::n('a')], 'x'], 'entry 2: entries must be [depth, node] pairs'],
             'only a depth' => [[[0]], 'entries must be [depth, node] pairs'],
-            'only a node' => [[[1 => self::n('a')]], 'entries must be [depth, node] pairs'],
+            'only a node' => [[[1 => self::n('a')]], 'entry 1: entries must be [depth, node] pairs'],
             'flat entry without node' => [[['depth' => 0]], 'entries must be [depth, node] pairs'],
             'flat entry with string depth' => [[['depth' => '0', 'node' => self::n('a')]], "depth '0' cannot follow"],
         ];

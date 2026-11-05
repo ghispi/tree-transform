@@ -279,7 +279,7 @@ final class GedmoTree
         return match ($config->strategy) {
             TreeStrategy::Nested => new NestedSetSource(
                 $rows,
-                new NestedSetFields('tt_left', 'tt_right', $config->root === null ? null : 'tt_root'),
+                new NestedSetFields('tt_left', 'tt_right', $config->root === null ? null : 'tt_root', id: 'tt_id'),
                 $accessor,
             ),
             TreeStrategy::MaterializedPath => new MaterializedPathSource(

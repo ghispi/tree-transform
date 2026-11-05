@@ -23,7 +23,9 @@ For Doctrine entities managed by Gedmo, [`GedmoTree`](gedmo.md) picks the right 
 ## Nested set
 
 Rows with left and right values, ordered by left value. When several trees share one table and each is numbered
-from 1 (Gedmo's `TreeRoot`), order by the root column first and name it in `NestedSetFields`.
+from 1 (Gedmo's `TreeRoot`), order by the root column first and name it in `NestedSetFields`. When a row breaks the
+numbering, the `InvalidTreeException` names it by its `id` field (`nodeId()`); set `NestedSetFields(id: …)` if your
+id column has another name.
 
 <!-- example: sources-nested-set -->
 ```php

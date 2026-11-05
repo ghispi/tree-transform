@@ -17,12 +17,15 @@ final readonly class NestedSetFields
      *                           NestedSetSink writes the id of each node's root into it (one tree per value)
      * @param string|null $level level field; only written by NestedSetSink (sources compute depths from the
      *                           intervals), null to leave it out
+     * @param string      $id    id field; NestedSetSource reads it only to name the offending node in an
+     *                           InvalidTreeException (nodeId() is null when the row has no such field)
      */
     public function __construct(
         public string $left = 'lft',
         public string $right = 'rgt',
         public ?string $root = null,
         public ?string $level = null,
+        public string $id = 'id',
     ) {}
 
     /**
