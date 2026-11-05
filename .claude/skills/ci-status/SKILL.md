@@ -8,7 +8,10 @@ description: Check GitHub Actions results for ghispi/tree-transform without the 
 ## Workflows
 
 - `.github/workflows/ci.yml` — every push to `main` and every PR: PHP 8.4 and 8.5 (highest deps) and PHP 8.4
-  (lowest deps), each `make ci`; superseded runs are cancelled; 20-minute job limit.
+  (lowest deps), each `make ci`; `Integration (MySQL, PostgreSQL)`; `Backward compatibility` (roave against the
+  latest tag). All five are required checks on `main`. Superseded runs are cancelled; 20-minute job limit.
+- `.github/workflows/docs.yml` — `Build site` on PRs and pushes touching docs (not required), deploy on `v*` tags.
+- `.github/workflows/benchmarks.yml` — on demand only; uploads the phpbench report as an artifact.
 - `.github/workflows/mutation.yml` — Mondays 04:00 UTC and on demand (Actions tab → Run workflow): `make infection`,
   60-minute limit (a local 4-thread run, like a hosted runner, takes ~18 min). Standard hosted runners are free for this public repository.
 

@@ -26,7 +26,7 @@ designing or changing behaviour; update it when behaviour changes.**
 
 - Agents (`.claude/agents`): `tree-semantics-reviewer` (opus), `test-engineer`, `perf-engineer`, `docs-writer`
   (sonnet).
-- Skills (`.claude/skills`): `run-checks`, `add-strategy`, `add-source`, `write-docs`, `gedmo-bridge`,
+- Skills (`.claude/skills`): `run-checks`, `add-strategy`, `add-source`, `write-docs`, `gedmo-bridge`, `pull-request`,
   `ci-status`, `release`.
 - `make docs` regenerates example outputs and the example blocks embedded in the docs.
 
@@ -34,4 +34,6 @@ designing or changing behaviour; update it when behaviour changes.**
 
 Remote `https://github.com/ghispi/tree-transform` via a repo-local credential helper reading the fine-grained token in
 `~/.config/tree-transform-github-token` (never read or print it). Commit identity is repo-local
-(`ghispi <ghispi@users.noreply.github.com>`). Push only when the user asks.
+(`ghispi <ghispi@users.noreply.github.com>`). Push only when the user asks. `main` is protected: changes land through
+a pull request with green required checks and a squash merge (`pull-request` skill, `.claude/scripts/github-api`);
+release tags `v*` cannot be moved or deleted.
