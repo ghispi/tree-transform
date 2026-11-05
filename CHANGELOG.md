@@ -56,6 +56,8 @@ API review before 1.0 (roadmap phase 1.0, step 1). All public types are listed i
 - CI guards the public API: a reflection snapshot test (`tests/Api`, `make api-snapshot`) and the Roave BC checker
   against the latest release (`make bc-check`, CI job `Backward compatibility`). The Docker image gains `bcmath` and
   `intl` for the checker.
+- The Gedmo bridge's integration tests also run on MySQL 8.4 and PostgreSQL 17 (`make test-db`, CI job
+  `Integration (MySQL, PostgreSQL)`). Benchmarks can be run on demand in GitHub Actions (`benchmarks.yml`).
 
 ## [0.2.0] - 2026-10-28
 

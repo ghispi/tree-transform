@@ -2,7 +2,7 @@ PHP_VERSION ?= 8.4
 DC = PHP_VERSION=$(PHP_VERSION) HOST_UID=$(shell id -u) HOST_GID=$(shell id -g) docker compose
 RUN = $(DC) run --rm php
 
-.PHONY: help build install update shell test coverage stan cs cs-fix infection bench docs api-snapshot bc-check ci
+.PHONY: help build install update shell test coverage stan cs cs-fix infection bench docs test-db db-down api-snapshot bc-check ci
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -21,6 +21,14 @@ shell: ## Shell in the PHP container
 
 test: ## Run PHPUnit
 	$(RUN) vendor/bin/phpunit
+
+test-db: ## Integration tests on MySQL and PostgreSQL (starts both in Docker)
+	$(DC) --profile db up -d --wait mysql postgres
+	$(DC) run --rm -e TT_DATABASE_URL=pdo-mysql://app:app@mysql/tree_transform php vendor/bin/phpunit --testsuite integration
+	$(DC) run --rm -e TT_DATABASE_URL=pdo-pgsql://app:app@postgres/tree_transform php vendor/bin/phpunit --testsuite integration
+
+db-down: ## Stop the test databases
+	$(DC) --profile db down
 
 coverage: ## PHPUnit with coverage report
 	$(RUN) vendor/bin/phpunit --coverage-text --coverage-html var/coverage

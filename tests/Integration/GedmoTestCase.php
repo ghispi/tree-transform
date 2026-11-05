@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Ghispi\TreeTransform\Tests\Integration;
 
 use Doctrine\Common\EventManager;
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Tools\DsnParser;
+use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -26,9 +29,27 @@ abstract class GedmoTestCase extends TestCase
         $listener = new TreeListener();
         $listener->setAnnotationReader(new AttributeReader());
         $events->addEventSubscriber($listener);
-        $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true], $config);
+        $connection = self::connection($config);
         $this->em = new EntityManager($connection, $config, $events);
-        (new SchemaTool($this->em))->createSchema($this->em->getMetadataFactory()->getAllMetadata());
+        $schema = new SchemaTool($this->em);
+        $metadata = $this->em->getMetadataFactory()->getAllMetadata();
+        $schema->dropSchema($metadata); // a shared database (MySQL, PostgreSQL) keeps tables between tests
+        $schema->createSchema($metadata);
+    }
+
+    /**
+     * SQLite in memory by default; TT_DATABASE_URL (e.g. pdo-mysql://app:app@mysql/tree_transform) selects another
+     * database, see `make test-db`.
+     */
+    private static function connection(Configuration $config): Connection
+    {
+        $url = getenv('TT_DATABASE_URL');
+        if ($url === false || $url === '') {
+            return DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true], $config);
+        }
+        $parser = new DsnParser(['pdo-mysql' => 'pdo_mysql', 'pdo-pgsql' => 'pdo_pgsql', 'pdo-sqlite' => 'pdo_sqlite']);
+
+        return DriverManager::getConnection($parser->parse($url), $config);
     }
 
     /**

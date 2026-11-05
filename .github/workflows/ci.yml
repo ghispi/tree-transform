@@ -43,6 +43,19 @@ jobs:
         run: make ci
 
 
+  databases:
+    name: Integration (MySQL, PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: make build
+      - name: Install dependencies
+        run: make install
+      - name: Gedmo bridge on MySQL 8.4 and PostgreSQL 17
+        run: make test-db
+
   bc:
     name: Backward compatibility
     runs-on: ubuntu-latest

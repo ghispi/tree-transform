@@ -12,5 +12,35 @@ services:
       - composer-cache:/home/app/.composer/cache
     working_dir: /app
 
+  # Databases for the integration tests (make test-db); not started by other targets.
+  mysql:
+    image: mysql:8.4
+    profiles: [db]
+    environment:
+      MYSQL_DATABASE: tree_transform
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: root
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uapp', '-papp']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: [db]
+    environment:
+      POSTGRES_DB: tree_transform
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'app', '-d', 'tree_transform']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
 volumes:
   composer-cache:

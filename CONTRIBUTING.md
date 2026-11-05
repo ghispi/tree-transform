@@ -18,7 +18,8 @@ Use another PHP version with `PHP_VERSION=8.5 make build install ci`.
 
 - One topic per pull request, with tests.
 - `make ci` must pass. For changes in `src/`, also run `make infection` (mutation testing, MSI ≥ 90%) and, for anything on
-  a hot path (sources, strategies, sinks), `make bench`.
+  a hot path (sources, strategies, sinks), `make bench`. For changes to the Gedmo bridge, run `make test-db`
+  (integration tests on MySQL and PostgreSQL in Docker; `make db-down` stops them).
 - Behaviour changes need documentation in the same pull request: the relevant page in `docs/`, and a runnable
   example in `examples/` with its expected output in a `.out` file (checked by the `docs` test suite).
 - Add a line to `CHANGELOG.md` under `[Unreleased]`.

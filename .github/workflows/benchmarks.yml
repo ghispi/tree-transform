@@ -1,0 +1,37 @@
+name: Benchmarks
+
+# Hosted runners are too noisy to gate pull requests on small regressions, so benchmarks run on demand.
+# The report is an artifact; compare two runs, or run `make bench` on a quiet machine for release numbers.
+on:
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: 'phpbench --filter (empty: all benchmarks)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  phpbench:
+    name: phpbench
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - run: make build install
+      - name: Run
+        env:
+          FILTER: ${{ inputs.filter }}
+        run: |
+          mkdir -p var
+          args=""
+          if [ -n "$FILTER" ]; then args="--filter=$FILTER"; fi
+          docker compose run --rm php vendor/bin/phpbench run --report=aggregate --dump-file=var/bench.xml $args | tee var/bench.txt
+      - uses: actions/upload-artifact@v5
+        with:
+          name: benchmarks
+          path: |
+            var/bench.txt
+            var/bench.xml

@@ -3,11 +3,12 @@ ARG PHP_VERSION=8.4
 FROM php:${PHP_VERSION}-cli-alpine
 
 # bcmath and intl: needed by the backward compatibility checker in tools/bc-check.
-RUN apk add --no-cache git unzip icu-libs icu-dev linux-headers $PHPIZE_DEPS \
+# pdo_mysql and pdo_pgsql: integration tests against MySQL and PostgreSQL (make test-db).
+RUN apk add --no-cache git unzip icu-libs libpq icu-dev postgresql-dev linux-headers $PHPIZE_DEPS \
     && pecl install pcov \
     && docker-php-ext-enable pcov \
-    && docker-php-ext-install bcmath intl \
-    && apk del $PHPIZE_DEPS linux-headers icu-dev
+    && docker-php-ext-install bcmath intl pdo_mysql pdo_pgsql \
+    && apk del $PHPIZE_DEPS linux-headers icu-dev postgresql-dev
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
