@@ -5,7 +5,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-API review before 1.0 (roadmap phase 1.0, step 1). All public types are listed in [docs/api.md](docs/api.md).
+## [0.3.0] - 2026-11-05
+
+The API review before 1.0 (roadmap phase 1.0, steps 1–4). This is the API 1.0 is meant to freeze; all public
+types are listed in [docs/api.md](docs/api.md). Upgrading from 0.2 needs code changes: see the **Breaking** entries.
 
 ### Changed
 
@@ -58,6 +61,8 @@ API review before 1.0 (roadmap phase 1.0, step 1). All public types are listed i
   `intl` for the checker.
 - The Gedmo bridge's integration tests also run on MySQL 8.4 and PostgreSQL 17 (`make test-db`, CI job
   `Integration (MySQL, PostgreSQL)`). Benchmarks can be run on demand in GitHub Actions (`benchmarks.yml`).
+- Mutation testing covers the strategies with an exhaustive test (every forest of up to five nodes, every set of
+  matches). The surviving mutants were reviewed; the spec (§11) lists why they cannot change output.
 
 ## [0.2.0] - 2026-10-28
 
@@ -113,6 +118,7 @@ First release.
   needs. Requires Doctrine ORM 3.6+ and gedmo/doctrine-extensions 3.20+ (both optional).
 - Documentation with 52 tested examples, a design specification, benchmarks, and a Docker-based development setup.
 
-[Unreleased]: https://github.com/ghispi/tree-transform/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ghispi/tree-transform/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ghispi/tree-transform/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ghispi/tree-transform/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ghispi/tree-transform/releases/tag/v0.1.0
