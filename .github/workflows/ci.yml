@@ -42,3 +42,29 @@ jobs:
       - name: Code style, static analysis, tests
         run: make ci
 
+
+  bc:
+    name: Backward compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the checker compares against the latest tag
+      - name: Build image
+        run: make build
+      - name: Install dependencies
+        run: make install
+      - name: Compare with the latest release
+        run: |
+          from=$(git describe --tags --abbrev=0)
+          case "$from" in
+            v0.1.*|v0.2.*)
+              # Releases before the API review (0.3.0) are not a baseline: report only.
+              echo "::notice::Comparing with $from, which predates the API freeze; breaks are reported, not enforced."
+              make bc-check BC_FROM="$from" || true
+              ;;
+            *)
+              make bc-check BC_FROM="$from"
+              ;;
+          esac

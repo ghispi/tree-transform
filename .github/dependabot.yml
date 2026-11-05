@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: composer
+    directory: /tools/bc-check
+    schedule:
+      interval: monthly
   - package-ecosystem: github-actions
     directory: /
     schedule:

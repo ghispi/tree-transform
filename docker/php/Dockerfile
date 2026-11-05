@@ -2,10 +2,12 @@
 ARG PHP_VERSION=8.4
 FROM php:${PHP_VERSION}-cli-alpine
 
-RUN apk add --no-cache git unzip linux-headers $PHPIZE_DEPS \
+# bcmath and intl: needed by the backward compatibility checker in tools/bc-check.
+RUN apk add --no-cache git unzip icu-libs icu-dev linux-headers $PHPIZE_DEPS \
     && pecl install pcov \
     && docker-php-ext-enable pcov \
-    && apk del $PHPIZE_DEPS linux-headers
+    && docker-php-ext-install bcmath intl \
+    && apk del $PHPIZE_DEPS linux-headers icu-dev
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

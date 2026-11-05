@@ -10,6 +10,35 @@ All classes are under `Ghispi\TreeTransform\`. **Role** says how you use a type:
 - **implement**: an extension interface you implement yourself ([Extending](extending.md)).
 - **read**: you receive it from the library and read it; do not construct it.
 
+## Compatibility promise
+
+From 1.0.0 the library follows [Semantic Versioning](https://semver.org/): a minor or patch release does not break
+code that uses the API on this page as documented. A break needs a new major version and an entry in
+`UPGRADE.md`. Before 1.0, a minor release (0.x → 0.y) may break the API, and the changelog says how to migrate.
+
+What the promise covers:
+
+- **Names**: public types, methods, constants, enum cases and their string values, and **parameter names**.
+  Named arguments make parameter names part of the API, so `toNestedSet(levelBase: 1)` keeps working.
+- **Signatures**: parameter order, types and defaults, and return types. A minor release may add an optional
+  parameter at the end, widen a parameter type, or narrow a return type.
+- **Behaviour**: the nodes each source, strategy and stage yields and their order and depths, the shapes the sinks
+  build, and which exception class is thrown for which problem. A bug fix may change output that contradicts the
+  documentation, and the changelog says so.
+- **Extension interfaces** (`Cursor`, `Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`): a minor
+  release never adds a method to them, since that would break your implementations. New capabilities come as new
+  interfaces you can opt into.
+- **Value objects you read** (`TreeConfig`, `Annotated`, `TreeNode`, `Ancestors`, exceptions): a minor release may
+  add properties or methods. Do not construct the ones marked **read** below.
+- **Supported versions**: a minor release may add support for new PHP, Doctrine ORM or gedmo/doctrine-extensions
+  versions. It may drop a version only once that version no longer gets security fixes upstream.
+- **Final classes**: classes are `final`. Wrap or compose them, don't extend them. Removing `final` is not a break.
+
+Two checks guard the promise on every push. `tests/Api/public-api.txt` records the API from reflection, so any
+change to it, parameter renames included, shows up as a diff (`make api-snapshot` updates it). The
+[Roave BC checker](https://github.com/Roave/BackwardCompatibilityCheck) compares with the latest release
+(`make bc-check`).
+
 ## Not part of the API
 
 - Everything in `Internal\`.

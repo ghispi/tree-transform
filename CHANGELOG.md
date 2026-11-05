@@ -52,7 +52,10 @@ API review before 1.0 (roadmap phase 1.0, step 1). All public types are listed i
   `childCount()`.
 - `GedmoTree::activeTrail()` accepts `modify` (last parameter), with the same meaning as in `tree()`. With `modify`
   set, the result equals `tree(modify: …)` followed by `ActiveTrail`, and the nested set row pushdown is not used.
-- `docs/api.md`: the public API at a glance.
+- `docs/api.md`: the public API at a glance and the compatibility promise from 1.0 (what SemVer covers).
+- CI guards the public API: a reflection snapshot test (`tests/Api`, `make api-snapshot`) and the Roave BC checker
+  against the latest release (`make bc-check`, CI job `Backward compatibility`). The Docker image gains `bcmath` and
+  `intl` for the checker.
 
 ## [0.2.0] - 2026-10-28
 

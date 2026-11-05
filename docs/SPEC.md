@@ -461,7 +461,9 @@ CI compares PR benchmarks against `main` and flags regressions > 10%.
   except Docker. CI uses the same image.
 - **PHP**: `>=8.4`; CI matrix 8.4 / 8.5, lowest + highest dependencies. 8.4 features in use where they help:
   asymmetric visibility (`public private(set)`) and property hooks for value objects, `new` without parentheses.
-- **License**: MIT. SemVer; `0.x` until the API is frozen.
+- **License**: MIT. SemVer; `0.x` until the API is frozen. Compatibility promise and what it covers:
+  [docs/api.md](api.md#compatibility-promise), guarded by the API snapshot test (`tests/Api`) and the Roave BC
+  checker (CI job `bc`, `make bc-check`; report-only while the latest tag predates 0.3.0).
 - **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
   repositories; superseded runs are cancelled); mutation testing weekly and on demand (`mutation.yml`, ~30 min);
   Dependabot; `CHANGELOG.md`
@@ -503,7 +505,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 | # | Step | Done when | Release |
 |---|---|---|---|
 | 1 | **API audit** (done).  List every public symbol (classes, methods, constructor parameters — named arguments make parameter names part of the API — enum cases, exception classes). Check naming consistency across `Tree`, sources, strategies, stages, sinks and the bridge; that `final`/`readonly` is applied; that every `Internal\*` type and `@internal` method stays out of public signatures. Independent review by `tree-semantics-reviewer`. | `docs/api.md` lists the public API; renames/removals done, each in `CHANGELOG.md` with the migration | 0.3.0 |
-| 2 | **BC policy.** Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
+| 2 | **BC policy** (done).  Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
 | 3 | **Spec matches CI.** §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
 | 4 | **Mutation survivors.** Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
 | 5 | **Benchmark report.** Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |

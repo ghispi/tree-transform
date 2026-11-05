@@ -12,6 +12,7 @@
         <testsuite name="differential"><directory>tests/Differential</directory></testsuite>
         <testsuite name="integration"><directory>tests/Integration</directory></testsuite>
         <testsuite name="docs"><directory>tests/Docs</directory></testsuite>
+        <testsuite name="api"><directory>tests/Api</directory></testsuite>
     </testsuites>
     <source>
         <include><directory>src</directory></include>

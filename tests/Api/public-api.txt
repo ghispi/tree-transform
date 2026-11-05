@@ -1,0 +1,310 @@
+
+interface Accessor\Accessor
+  reader(string $field): Closure
+
+final readonly class Accessor\ArrayKeyAccessor implements Accessor\Accessor
+  reader(string $field): Closure
+
+final class Accessor\AutoAccessor implements Accessor\Accessor
+  reader(string $field): Closure
+
+final readonly class Accessor\GetterAccessor implements Accessor\Accessor
+  reader(string $field): Closure
+
+final readonly class Accessor\PrivatePropertyAccessor implements Accessor\Accessor
+  __construct(string $class)
+  reader(string $field): Closure
+
+final readonly class Accessor\PropertyAccessor implements Accessor\Accessor
+  reader(string $field): Closure
+
+final class Bridge\Gedmo\GedmoTree
+  __construct(Doctrine\ORM\EntityManagerInterface $em, ?Gedmo\Tree\TreeListener $listener = NULL)
+  activeTrail(string $class, object|string|int $active, bool $siblings = true, int $activeChildrenDepth = 1, Bridge\Gedmo\Hydration $hydration = Bridge\Gedmo\Hydration::Arrays, ?Closure $modify = NULL): Tree
+  config(string $class): Bridge\Gedmo\TreeConfig
+  tree(string $class, object|string|int|null $root = NULL, ?int $maxDepth = NULL, Bridge\Gedmo\Hydration $hydration = Bridge\Gedmo\Hydration::Arrays, ?Closure $modify = NULL): Tree
+
+enum Bridge\Gedmo\Hydration
+  case Arrays
+  case Entities
+
+final readonly class Bridge\Gedmo\TreeConfig
+  property readonly string $class
+  property readonly Bridge\Gedmo\TreeStrategy $strategy
+  property readonly string $id
+  property readonly ?string $parent
+  property readonly ?string $left
+  property readonly ?string $right
+  property readonly ?string $root
+  property readonly bool $rootIsAssociation
+  property readonly ?string $level
+  property readonly ?string $path
+  property readonly string $pathSeparator
+  property readonly bool $pathEndsWithSeparator
+  property readonly ?string $closureClass
+
+enum Bridge\Gedmo\TreeStrategy: string
+  case Nested = 'nested'
+  case Closure = 'closure'
+  case MaterializedPath = 'materializedPath'
+
+interface Cursor\Cursor
+  depth(): int
+  next(): bool
+  node(): mixed
+  skipSubtree(): void
+
+final class Exception\CycleDetectedException extends Exception\InvalidTreeException implements Exception\TreeTransformException, Throwable
+  ids(): array
+
+final class Exception\InvalidArgumentException extends InvalidArgumentException implements Exception\TreeTransformException, Throwable
+
+class Exception\InvalidTreeException extends UnexpectedValueException implements Exception\TreeTransformException, Throwable
+  static at(mixed $id, string $problem): Exception\InvalidTreeException
+  nodeId(): mixed
+
+final class Exception\LogicException extends LogicException implements Exception\TreeTransformException, Throwable
+
+final class Exception\OrphanNodeException extends Exception\InvalidTreeException implements Exception\TreeTransformException, Throwable
+  childCount(): int
+  parentId(): string|int
+
+final class Exception\OutOfRangeException extends OutOfRangeException implements Exception\TreeTransformException, Throwable
+
+interface Exception\TreeTransformException extends Throwable
+
+final readonly class Predicate\AllOf implements Predicate\Predicate
+  __construct(Predicate\Predicate|Closure ...$predicates)
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Predicate\AncestorTracker
+  __construct()
+  ancestors(): Predicate\Ancestors
+  enter(mixed $node, int $depth): void
+
+final class Predicate\Ancestors implements Countable, IteratorAggregate, Traversable
+  at(int $depth): mixed
+  count(): int
+  every(callable $test): bool
+  getIterator(): Generator
+  static of(iterable $path = []): Predicate\Ancestors
+  parent(): mixed
+  some(callable $test): bool
+  toArray(): array
+
+final readonly class Predicate\AnyOf implements Predicate\Predicate
+  __construct(Predicate\Predicate|Closure ...$predicates)
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Predicate\Callback implements Predicate\Predicate
+  __construct(Closure $test)
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+  static of(Predicate\Predicate|Closure $predicate): Predicate\Predicate
+
+final readonly class Predicate\DepthRange implements Predicate\Predicate
+  __construct(int $min = 0, int $max = PHP_INT_MAX)
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Predicate\FieldEquals implements Predicate\Predicate
+  __construct(string $field, mixed $value, Accessor\Accessor $accessor = new Accessor\AutoAccessor())
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Predicate\FieldIn implements Predicate\Predicate
+  __construct(string $field, iterable $values, Accessor\Accessor $accessor = new Accessor\AutoAccessor())
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Predicate\Not implements Predicate\Predicate
+  __construct(Predicate\Predicate|Closure $predicate)
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+interface Predicate\Predicate
+  matches(mixed $node, int $depth, Predicate\Ancestors $ancestors): bool
+
+final readonly class Sink\AdjacencyListSink implements Sink\Sink
+  __construct(Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), mixed $rootParent = NULL, ?Closure $nodeFactory = NULL)
+  consume(Cursor\Cursor $cursor): array
+
+final readonly class Sink\CountSink implements Sink\Sink
+  consume(Cursor\Cursor $cursor): int
+
+final readonly class Sink\FlatListSink implements Sink\Sink
+  consume(Cursor\Cursor $cursor): array
+
+final readonly class Sink\NestedArraySink implements Sink\Sink
+  __construct(string $childrenField = 'children', bool $omitEmptyChildren = false, ?Closure $nodeFactory = NULL)
+  consume(Cursor\Cursor $cursor): array
+
+final readonly class Sink\NestedSetSink implements Sink\Sink
+  __construct(Source\NestedSetFields $fields = new Source\NestedSetFields(level: 'lvl'), int $levelBase = 0, ?Closure $nodeFactory = NULL, string $idField = 'id', Accessor\Accessor $accessor = new Accessor\AutoAccessor())
+  consume(Cursor\Cursor $cursor): array
+
+interface Sink\Sink
+  consume(Cursor\Cursor $cursor): mixed
+
+final readonly class Sink\TreeNode implements Countable, IteratorAggregate, Traversable
+  property readonly mixed $node
+  property readonly array $children
+  __construct(mixed $node, array $children = [])
+  count(): int
+  getIterator(): ArrayIterator
+  isLeaf(): bool
+
+final readonly class Source\AdjacencyListFields
+  property readonly string $id
+  property readonly string $parent
+  __construct(string $id = 'id', string $parent = 'parent_id')
+  static gedmo(): Source\AdjacencyListFields
+
+final readonly class Source\AdjacencyListSource implements Source\Source
+  __construct(iterable $rows, Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), Source\OrphanPolicy $orphans = Source\OrphanPolicy::Throw, mixed $rootParent = NULL, ?string $siblingOrder = NULL)
+  open(): Cursor\Cursor
+
+final readonly class Source\DepthListSource implements Source\Source
+  static keyed(iterable $entries): Source\DepthListSource
+  open(): Cursor\Cursor
+  static pairs(iterable $pairs): Source\DepthListSource
+
+final readonly class Source\LazySource implements Source\Source
+  __construct(Closure $factory)
+  open(): Cursor\Cursor
+
+final readonly class Source\MaterializedPathFields
+  property readonly string $path
+  property readonly string $separator
+  __construct(string $path = 'path', string $separator = ',')
+  static gedmo(): Source\MaterializedPathFields
+
+final readonly class Source\MaterializedPathSource implements Source\Source
+  __construct(iterable $rows, Source\MaterializedPathFields $fields = new Source\MaterializedPathFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), bool $allowGaps = false)
+  open(): Cursor\Cursor
+
+final readonly class Source\NestedArraySource implements Source\Source
+  __construct(iterable $roots, string $childrenField = 'children', Accessor\Accessor $accessor = new Accessor\AutoAccessor())
+  open(): Cursor\Cursor
+
+final readonly class Source\NestedSetFields
+  property readonly string $left
+  property readonly string $right
+  property readonly ?string $root
+  property readonly ?string $level
+  __construct(string $left = 'lft', string $right = 'rgt', ?string $root = NULL, ?string $level = NULL)
+  static gedmo(): Source\NestedSetFields
+
+final readonly class Source\NestedSetSource implements Source\Source
+  __construct(iterable $rows, Source\NestedSetFields $fields = new Source\NestedSetFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor())
+  open(): Cursor\Cursor
+
+enum Source\OrphanPolicy
+  case Throw
+  case AsRoot
+  case Drop
+
+final readonly class Source\PreorderedAdjacencySource implements Source\Source
+  __construct(iterable $rows, Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), mixed $rootParent = NULL)
+  open(): Cursor\Cursor
+
+interface Source\Source
+  open(): Cursor\Cursor
+
+final readonly class Stage\DepthWindow implements Stage\Stage
+  __construct(int $min = 0, int $max = PHP_INT_MAX)
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Stage\Filter implements Stage\Stage
+  __construct(Predicate\Predicate|Closure $predicate, Strategy\FilterStrategy $strategy = new Strategy\Prune())
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Stage\Limit implements Stage\Stage
+  __construct(int $count)
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Stage\Map implements Stage\Stage
+  __construct(Closure $transform)
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Stage\MaxDepth implements Stage\Stage
+  __construct(int $max)
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Stage\SortSiblings implements Stage\Stage
+  __construct(Closure $compare)
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+interface Stage\Stage
+  apply(Cursor\Cursor $input): Cursor\Cursor
+
+final readonly class Strategy\ActiveTrail implements Strategy\FilterStrategy
+  __construct(bool $siblings = true, int $activeChildrenDepth = 1, bool $multiple = true)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Strategy\Annotate implements Strategy\FilterStrategy
+  __construct(?Closure $combine = NULL)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Strategy\Annotated
+  property readonly mixed $node
+  property readonly Strategy\MatchState $state
+  __construct(mixed $node, Strategy\MatchState $state)
+
+interface Strategy\FilterStrategy
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Strategy\KeepAncestors implements Strategy\FilterStrategy
+  __construct(Strategy\OnMatch $onMatch = Strategy\OnMatch::EvaluateDescendants)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+enum Strategy\MatchState: string
+  case Match = 'match'
+  case AncestorOfMatch = 'ancestor'
+  case DescendantOfMatch = 'descendant'
+  case None = 'none'
+
+final readonly class Strategy\MinMatches implements Strategy\FilterStrategy
+  __construct(int $min)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+enum Strategy\OnMatch
+  case EvaluateDescendants
+  case KeepDescendants
+  case DropDescendants
+
+final readonly class Strategy\Placeholder implements Strategy\FilterStrategy
+  __construct(Closure $factory, Strategy\OnMatch $onMatch = Strategy\OnMatch::EvaluateDescendants)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Strategy\Promote implements Strategy\FilterStrategy
+  __construct(Strategy\OnMatch $onMatch = Strategy\OnMatch::EvaluateDescendants)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Strategy\Prune implements Strategy\FilterStrategy
+  __construct(Strategy\OnMatch $onMatch = Strategy\OnMatch::EvaluateDescendants)
+  apply(Cursor\Cursor $input, Predicate\Predicate $predicate): Cursor\Cursor
+
+final readonly class Tree implements IteratorAggregate, Traversable
+  activeTrail(Predicate\Predicate|Closure $predicate, bool $siblings = true, int $activeChildrenDepth = 1, bool $multiple = true): Tree
+  annotate(Predicate\Predicate|Closure $predicate, ?Closure $combine = NULL): Tree
+  count(): int
+  cursor(): Cursor\Cursor
+  depthWindow(int $min = 0, int $max = PHP_INT_MAX): Tree
+  filter(Predicate\Predicate|Closure $predicate, ?Strategy\FilterStrategy $strategy = NULL): Tree
+  static from(Source\Source $source): Tree
+  static fromAdjacencyList(iterable $rows, Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), Source\OrphanPolicy $orphans = Source\OrphanPolicy::Throw, mixed $rootParent = NULL, ?string $siblingOrder = NULL): Tree
+  static fromDepthList(iterable $entries): Tree
+  static fromFlatList(iterable $entries): Tree
+  static fromMaterializedPath(iterable $rows, Source\MaterializedPathFields $fields = new Source\MaterializedPathFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), bool $allowGaps = false): Tree
+  static fromNestedArray(iterable $roots, string $childrenField = 'children', Accessor\Accessor $accessor = new Accessor\AutoAccessor()): Tree
+  static fromNestedSet(iterable $rows, Source\NestedSetFields $fields = new Source\NestedSetFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor()): Tree
+  static fromPreorderedAdjacencyList(iterable $rows, Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), mixed $rootParent = NULL): Tree
+  getIterator(): Generator
+  into(Sink\Sink $sink): mixed
+  iterate(): Generator
+  static lazy(Closure $factory): Tree
+  limit(int $count): Tree
+  map(Closure $transform): Tree
+  maxDepth(int $max): Tree
+  pipe(Stage\Stage $stage): Tree
+  sortSiblings(Closure $compare): Tree
+  toAdjacencyList(Source\AdjacencyListFields $fields = new Source\AdjacencyListFields(), Accessor\Accessor $accessor = new Accessor\AutoAccessor(), mixed $rootParent = NULL, ?Closure $nodeFactory = NULL): array
+  toFlatList(): array
+  toNestedArray(string $childrenField = 'children', bool $omitEmptyChildren = false, ?Closure $nodeFactory = NULL): array
+  toNestedSet(Source\NestedSetFields $fields = new Source\NestedSetFields(level: 'lvl'), int $levelBase = 0, ?Closure $nodeFactory = NULL, string $idField = 'id', Accessor\Accessor $accessor = new Accessor\AutoAccessor()): array

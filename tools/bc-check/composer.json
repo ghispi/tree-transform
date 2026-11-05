@@ -1,0 +1,12 @@
+{
+    "name": "ghispi/tree-transform-bc-check",
+    "description": "Backward compatibility checker for ghispi/tree-transform, kept apart from the library's dev dependencies.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "roave/backward-compatibility-check": "^8.10"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
