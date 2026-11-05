@@ -144,7 +144,7 @@ final readonly class GeneratedTree
      *
      * @return list<array<string, mixed>>
      */
-    public function nestedArrays(string $childrenKey = 'children'): array
+    public function nestedArrays(string $childrenField = 'children'): array
     {
         $roots = [];
         /** @var array<int, array<string, mixed>> $nodes */
@@ -156,7 +156,7 @@ final readonly class GeneratedTree
         foreach ([...$this->entries, null] as $entry) {
             $depth = $entry === null ? -1 : $entry['depth'];
             while ($top >= 0 && $top >= $depth) {
-                $built = $nodes[$top] + [$childrenKey => $children[$top]];
+                $built = $nodes[$top] + [$childrenField => $children[$top]];
                 unset($nodes[$top], $children[$top]);
                 --$top;
                 if ($top >= 0) {

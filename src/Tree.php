@@ -167,6 +167,16 @@ final readonly class Tree implements \IteratorAggregate
         return new self(DepthListSource::keyed($entries));
     }
 
+    /**
+     * Pre-order ['depth' => int, 'node' => mixed] entries (the output of toFlatList()) or [depth, node] pairs.
+     *
+     * @param iterable<array{0: int, 1: mixed}|array{depth: int, node: mixed}> $entries
+     */
+    public static function fromFlatList(iterable $entries): self
+    {
+        return new self(DepthListSource::pairs($entries));
+    }
+
     // ---------------------------------------------------------------- stages
 
     /**
@@ -182,15 +192,15 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Navigation menu expanded down to the active node(s), see ActiveTrail.
      *
-     * @param Predicate|\Closure $isActive
+     * @param Predicate|\Closure $predicate matches the active node(s)
      */
     public function activeTrail(
-        Predicate|\Closure $isActive,
+        Predicate|\Closure $predicate,
         bool $siblings = true,
         int $activeChildrenDepth = 1,
         bool $multiple = true,
     ): self {
-        return $this->filter($isActive, new ActiveTrail($siblings, $activeChildrenDepth, $multiple));
+        return $this->filter($predicate, new ActiveTrail($siblings, $activeChildrenDepth, $multiple));
     }
 
     /**
@@ -225,7 +235,7 @@ final readonly class Tree implements \IteratorAggregate
     /**
      * Keeps depths $min..$max; nodes at $min become roots.
      */
-    public function depthWindow(int $min, int $max = \PHP_INT_MAX): self
+    public function depthWindow(int $min = 0, int $max = \PHP_INT_MAX): self
     {
         return $this->pipe(new DepthWindow($min, $max));
     }
@@ -297,11 +307,11 @@ final readonly class Tree implements \IteratorAggregate
      * @return list<mixed>
      */
     public function toNestedArray(
-        string $childrenKey = 'children',
+        string $childrenField = 'children',
         bool $omitEmptyChildren = false,
         ?\Closure $nodeFactory = null,
     ): array {
-        return $this->into(new NestedArraySink($childrenKey, $omitEmptyChildren, $nodeFactory));
+        return $this->into(new NestedArraySink($childrenField, $omitEmptyChildren, $nodeFactory));
     }
 
     /**
@@ -322,31 +332,29 @@ final readonly class Tree implements \IteratorAggregate
      * @return list<mixed>
      */
     public function toAdjacencyList(
-        string $idField = 'id',
-        string $parentField = 'parent_id',
+        AdjacencyListFields $fields = new AdjacencyListFields(),
+        Accessor $accessor = new AutoAccessor(),
         mixed $rootParent = null,
         ?\Closure $nodeFactory = null,
-        Accessor $accessor = new AutoAccessor(),
     ): array {
-        return $this->into(new AdjacencyListSink($idField, $parentField, $rootParent, $nodeFactory, $accessor));
+        return $this->into(new AdjacencyListSink($fields, $accessor, $rootParent, $nodeFactory));
     }
 
     /**
-     * Pre-order list with recomputed nested set values.
+     * Pre-order list with recomputed nested set values; with a root field, numbered per root (see NestedSetSink).
      *
      * @param \Closure|null $nodeFactory
      *
      * @return list<mixed>
      */
     public function toNestedSet(
-        string $leftField = 'lft',
-        string $rightField = 'rgt',
-        ?string $levelField = 'lvl',
+        NestedSetFields $fields = new NestedSetFields(level: 'lvl'),
         int $levelBase = 0,
-        bool $restartPerRoot = false,
         ?\Closure $nodeFactory = null,
+        string $idField = 'id',
+        Accessor $accessor = new AutoAccessor(),
     ): array {
-        return $this->into(new NestedSetSink($leftField, $rightField, $levelField, $levelBase, $restartPerRoot, $nodeFactory));
+        return $this->into(new NestedSetSink($fields, $levelBase, $nodeFactory, $idField, $accessor));
     }
 
     /**

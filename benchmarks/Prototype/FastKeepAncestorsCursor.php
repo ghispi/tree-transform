@@ -44,7 +44,7 @@ final class FastKeepAncestorsCursor implements Cursor
         private readonly \Closure $test,
         private readonly OnMatch $onMatch = OnMatch::EvaluateDescendants,
     ) {
-        $this->ancestors = new Ancestors();
+        $this->ancestors = Ancestors::of();
     }
 
     public function next(): bool

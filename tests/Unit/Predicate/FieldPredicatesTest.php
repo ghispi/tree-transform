@@ -25,7 +25,7 @@ final class FieldPredicatesTest extends TestCase
 {
     private static function test(Predicate $p, mixed $node = null, int $depth = 0): bool
     {
-        return $p->matches($node, $depth, new Ancestors());
+        return $p->matches($node, $depth, Ancestors::of());
     }
 
     /**

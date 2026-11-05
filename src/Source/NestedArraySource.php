@@ -25,7 +25,7 @@ final readonly class NestedArraySource implements Source, StreamSource
      */
     public function __construct(
         private iterable $roots,
-        private string $children = 'children',
+        private string $childrenField = 'children',
         private Accessor $accessor = new AutoAccessor(),
     ) {}
 
@@ -41,7 +41,7 @@ final readonly class NestedArraySource implements Source, StreamSource
      */
     public function stream(): \Generator
     {
-        return self::read(self::level($this->roots), $this->accessor->reader($this->children), $this->children);
+        return self::read(self::level($this->roots), $this->accessor->reader($this->childrenField), $this->childrenField);
     }
 
     /**

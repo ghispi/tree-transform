@@ -23,14 +23,14 @@ use Ghispi\TreeTransform\Internal\StreamSink;
 final readonly class NestedArraySink implements Sink, StreamSink
 {
     /**
-     * @param string                                         $childrenKey       key for children of array payloads
+     * @param string                                         $childrenField       key for children of array payloads
      *                                                                          (use "__children" for Gedmo
      *                                                                          buildTree() compatible output)
      * @param bool                                           $omitEmptyChildren leave the children key out of leaves
      * @param \Closure|null $nodeFactory
      */
     public function __construct(
-        private string $childrenKey = 'children',
+        private string $childrenField = 'children',
         private bool $omitEmptyChildren = false,
         private ?\Closure $nodeFactory = null,
     ) {}
@@ -96,7 +96,7 @@ final readonly class NestedArraySink implements Sink, StreamSink
         }
         if (\is_array($node)) {
             if ($children !== [] || !$this->omitEmptyChildren) {
-                $node[$this->childrenKey] = $children;
+                $node[$this->childrenField] = $children;
             }
 
             return $node;

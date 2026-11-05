@@ -80,7 +80,7 @@ final class GedmoTree
         $orphans = OrphanPolicy::Throw;
         $rootParent = null;
         switch ($config->strategy) {
-            case TreeConfig::NESTED:
+            case TreeStrategy::Nested:
                 if ($anchor !== null) {
                     $qb->andWhere(\sprintf('%1$s.%2$s >= :tt_l AND %1$s.%3$s <= :tt_r', self::ALIAS, $config->left, $config->right))
                         ->setParameter('tt_l', $anchor['left'])
@@ -88,7 +88,7 @@ final class GedmoTree
                     $this->sameRoot($qb, $config, $anchor);
                 }
                 break;
-            case TreeConfig::MATERIALIZED_PATH:
+            case TreeStrategy::MaterializedPath:
                 if ($anchor !== null) {
                     // Descendants start with the anchor's path followed by the separator; "!" escapes LIKE wildcards
                     // portably (no reliance on a database's default escape character).
@@ -101,7 +101,7 @@ final class GedmoTree
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
                 }
                 break;
-            case TreeConfig::CLOSURE:
+            case TreeStrategy::Closure:
                 if ($anchor !== null) {
                     $qb->innerJoin($config->closureClass ?? '', 'tt_c', 'WITH', \sprintf('tt_c.descendant = %s', self::ALIAS))
                         ->andWhere('tt_c.ancestor = :tt_anchor')
@@ -115,13 +115,13 @@ final class GedmoTree
                 break;
         }
         // With $modify, removed rows shift depths, so depth is only applied in PHP to keep one meaning of maxDepth.
-        if ($maxDepth !== null && $modify === null && $config->level !== null && $config->strategy !== TreeConfig::CLOSURE) {
+        if ($maxDepth !== null && $modify === null && $config->level !== null && $config->strategy !== TreeStrategy::Closure) {
             $qb->andWhere(\sprintf('%s.%s <= :tt_level', self::ALIAS, $config->level))
                 ->setParameter('tt_level', ($anchor['level'] ?? $this->minLevel($config)) + $maxDepth);
         }
         if ($modify !== null) {
             $modify($qb, self::ALIAS);
-            if ($config->strategy === TreeConfig::CLOSURE) {
+            if ($config->strategy === TreeStrategy::Closure) {
                 $orphans = OrphanPolicy::Drop;
             }
         }
@@ -132,11 +132,16 @@ final class GedmoTree
     }
 
     /**
-     * A navigation menu expanded down to $active (see ActiveTrail). For nested sets only the needed rows are loaded:
-     * roots, the active node's ancestors, their children and the active node's children.
+     * A navigation menu expanded down to $active (see ActiveTrail; there is exactly one active node). For nested sets
+     * without $modify only the needed rows are loaded: roots, the active node's ancestors, their children and the
+     * active node's children.
      *
      * @param class-string      $class
      * @param object|int|string $active entity or id of the active node
+     * @param \Closure|null     $modify  as in tree(): rows it removes disappear before the tree is built, so the
+     *                                   menu is the ActiveTrail of tree($class, modify: $modify). The whole tree is
+     *                                   then read (removed rows move their children up, so the needed rows cannot
+     *                                   be selected in advance). If it removes the active node, no node is active.
      */
     public function activeTrail(
         string $class,
@@ -144,14 +149,17 @@ final class GedmoTree
         bool $siblings = true,
         int $activeChildrenDepth = 1,
         Hydration $hydration = Hydration::Arrays,
+        ?\Closure $modify = null,
     ): Tree {
         $config = $this->config($class);
         $anchor = $this->anchor($config, $active);
         $activeId = $anchor['id'];
         $isActive = fn(mixed $node): bool => (string) $this->idOf($node, $config) === (string) $activeId;
 
-        if ($config->strategy !== TreeConfig::NESTED) {
-            return $this->tree($class, hydration: $hydration)
+        // With $modify a removed row promotes its children (nested set), so siblings, roots and the active node's
+        // children can come from anywhere below a removed row: no pushdown, same result as tree() + ActiveTrail.
+        if ($config->strategy !== TreeStrategy::Nested || $modify !== null) {
+            return $this->tree($class, hydration: $hydration, modify: $modify)
                 ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
         }
 
@@ -221,7 +229,7 @@ final class GedmoTree
         }
 
         switch ($config->strategy) {
-            case TreeConfig::NESTED:
+            case TreeStrategy::Nested:
                 if ($config->left === null || $config->right === null) {
                     throw new LogicException(\sprintf('%s: nested set mapping without left/right fields.', $config->class));
                 }
@@ -231,20 +239,18 @@ final class GedmoTree
                 }
                 $qb->addOrderBy(\sprintf('%s.%s', $a, $config->left));
                 break;
-            case TreeConfig::MATERIALIZED_PATH:
+            case TreeStrategy::MaterializedPath:
                 if ($config->path === null) {
                     throw new LogicException(\sprintf('%s: materialized path mapping without path field.', $config->class));
                 }
                 $qb->addSelect(\sprintf('%s.%s AS tt_path', $a, $config->path))->addOrderBy(\sprintf('%s.%s', $a, $config->path));
                 break;
-            case TreeConfig::CLOSURE:
+            case TreeStrategy::Closure:
                 if ($config->parent === null) {
                     throw new LogicException(\sprintf('%s: closure mapping without parent field.', $config->class));
                 }
                 $qb->addOrderBy(\sprintf('%s.%s', $a, $config->id));
                 break;
-            default:
-                throw new LogicException(\sprintf('Unsupported Gedmo tree strategy "%s".', $config->strategy));
         }
 
         return $qb;
@@ -271,18 +277,18 @@ final class GedmoTree
         $accessor = new ArrayKeyAccessor();
 
         return match ($config->strategy) {
-            TreeConfig::NESTED => new NestedSetSource(
+            TreeStrategy::Nested => new NestedSetSource(
                 $rows,
                 new NestedSetFields('tt_left', 'tt_right', $config->root === null ? null : 'tt_root'),
                 $accessor,
             ),
-            TreeConfig::MATERIALIZED_PATH => new MaterializedPathSource(
+            TreeStrategy::MaterializedPath => new MaterializedPathSource(
                 $rows,
                 new MaterializedPathFields('tt_path', $config->pathSeparator),
                 $accessor,
                 allowGaps: $allowGaps,
             ),
-            default => new AdjacencyListSource(
+            TreeStrategy::Closure => new AdjacencyListSource(
                 $rows,
                 new AdjacencyListFields('tt_id', 'tt_parent'),
                 $accessor,

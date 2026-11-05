@@ -44,8 +44,8 @@ echo json_encode($tree->toNestedArray()), "\n\n";
 echo "omitEmptyChildren: true\n";
 echo json_encode($tree->toNestedArray(omitEmptyChildren: true)), "\n\n";
 
-echo "childrenKey: '__children' (same shape as Gedmo buildTree())\n";
-echo json_encode($tree->toNestedArray(childrenKey: '__children')), "\n\n";
+echo "childrenField: '__children' (same shape as Gedmo buildTree())\n";
+echo json_encode($tree->toNestedArray(childrenField: '__children')), "\n\n";
 
 echo "nodeFactory: build any shape\n";
 echo json_encode($tree->toNestedArray(nodeFactory: fn(array $node, array $children, int $depth) => [
@@ -64,7 +64,7 @@ Default: every node gets a 'children' key
 omitEmptyChildren: true
 [{"id":1,"title":"Clothing","children":[{"id":2,"title":"Men"},{"id":3,"title":"Women"}]}]
 
-childrenKey: '__children' (same shape as Gedmo buildTree())
+childrenField: '__children' (same shape as Gedmo buildTree())
 [{"id":1,"title":"Clothing","__children":[{"id":2,"title":"Men","__children":[]},{"id":3,"title":"Women","__children":[]}]}]
 
 nodeFactory: build any shape
@@ -76,7 +76,7 @@ Source: [`examples/outputs-nested-array.php`](../examples/outputs-nested-array.p
 
 | Option | Type | Default | Effect |
 |---|---|---|---|
-| `childrenKey` | `string` | `'children'` | Key for the children of array payloads. `'__children'` matches Gedmo's `buildTree()` |
+| `childrenField` | `string` | `'children'` | Key for the children of array payloads. `'__children'` matches Gedmo's `buildTree()` |
 | `omitEmptyChildren` | `bool` | `false` | Leave the children key out of leaves |
 | `nodeFactory` | `?Closure(mixed $node, list<mixed> $children, int $depth): mixed` | `null` | Builds each node. `$children` holds already-built children |
 
@@ -239,7 +239,7 @@ The output of `iterate()` can feed another pipeline: `Tree::fromDepthList($tree-
 ## Flat list
 
 `toFlatList()` collects the same pre-order entries into an array of `['depth' => int, 'node' => mixed]`, e.g. for
-an indented `<select>` rendered by a template.
+an indented `<select>` rendered by a template. `Tree::fromFlatList()` reads it back.
 
 <!-- example: outputs-flat-list -->
 ```php
@@ -256,6 +256,9 @@ $list = Tree::fromNestedSet($rows)
 
 var_export($list);
 echo "\n";
+
+// Tree::fromFlatList() reads the same shape back.
+echo implode(' / ', iterator_to_array(Tree::fromFlatList($list)->depthWindow(1)->iterate(), false)), "\n";
 ```
 
 Output:
@@ -283,6 +286,7 @@ array (
     'node' => 'Garden',
   ),
 )
+Clothing / Electronics / Garden
 ```
 
 Source: [`examples/outputs-flat-list.php`](../examples/outputs-flat-list.php)
@@ -296,6 +300,7 @@ input.
 
 <!-- example: outputs-adjacency-list -->
 ```php
+use Ghispi\TreeTransform\Source\AdjacencyListFields;
 use Ghispi\TreeTransform\Strategy\Promote;
 use Ghispi\TreeTransform\Tree;
 
@@ -307,7 +312,7 @@ $rows = require __DIR__ . '/support/shop.php';
 $list = Tree::fromNestedSet($rows)
     ->filter(fn(array $c) => $c['products'] > 0, new Promote())
     ->map(fn(array $c) => ['id' => $c['id'], 'title' => $c['title']])
-    ->toAdjacencyList(idField: 'id', parentField: 'parent_id', rootParent: 0);
+    ->toAdjacencyList(new AdjacencyListFields('id', 'parent_id'), rootParent: 0);
 
 foreach ($list as $row) {
     printf("%-3d %-8s parent_id: %d\n", $row['id'], $row['title'], $row['parent_id']);
@@ -336,13 +341,12 @@ Source: [`examples/outputs-adjacency-list.php`](../examples/outputs-adjacency-li
 
 | Option | Type | Default | Effect |
 |---|---|---|---|
-| `idField` | `string` | `'id'` | Field the id is read from |
-| `parentField` | `string` | `'parent_id'` | Field the parent id is written to (array payloads) |
+| `fields` | `AdjacencyListFields` | `id`, `parent_id` | The id is read from `id`, the parent id written to `parent` (array payloads) — the same object `fromAdjacencyList()` takes |
+| `accessor` | `Accessor` | `AutoAccessor` | Reads the id |
 | `rootParent` | `mixed` | `null` | Parent value written for roots, e.g. `0` |
 | `nodeFactory` | `?Closure(mixed $node, int\|string\|null $parentId, int $depth): mixed` | `null` | Builds each output row. Required for object payloads |
 
-Object payloads without a `nodeFactory` throw `InvalidArgumentException`. The id is read with `AutoAccessor`; to
-read it another way, use `new AdjacencyListSink(…, accessor: $accessor)` with `into()`.
+Object payloads without a `nodeFactory` throw `InvalidArgumentException`.
 
 ## Nested set
 
@@ -351,6 +355,7 @@ restructured tree, or to hand it to code that expects nested sets.
 
 <!-- example: outputs-nested-set -->
 ```php
+use Ghispi\TreeTransform\Source\NestedSetFields;
 use Ghispi\TreeTransform\Tree;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -362,20 +367,20 @@ $rows = Tree::fromNestedSet($rows)
     ->filter(fn(array $c) => $c['slug'] !== 'electronics')
     ->maxDepth(1)
     ->map(fn(array $c) => ['id' => $c['id'], 'title' => $c['title']])
-    ->toNestedSet(leftField: 'lft', rightField: 'rgt', levelField: 'lvl', levelBase: 0);
+    ->toNestedSet(new NestedSetFields(left: 'lft', right: 'rgt', level: 'lvl'), levelBase: 0);
 
 foreach ($rows as $row) {
     printf("%-2d %-9s lft %2d  rgt %2d  lvl %d\n", $row['id'], $row['title'], $row['lft'], $row['rgt'], $row['lvl']);
 }
 
-// Several roots numbered from 1 each (Gedmo with a TreeRoot column).
+// Several roots numbered from 1 each, with the id of each node's new root (Gedmo with a TreeRoot column).
 $forest = Tree::fromNestedSet(require __DIR__ . '/support/shop.php')
     ->depthWindow(1, 1)
-    ->map(fn(array $c) => ['title' => $c['title']])
-    ->toNestedSet(levelField: null, restartPerRoot: true);
+    ->map(fn(array $c) => ['id' => $c['id'], 'title' => $c['title']])
+    ->toNestedSet(new NestedSetFields(root: 'root'));
 echo "\n";
 foreach ($forest as $row) {
-    echo "{$row['title']}: {$row['lft']}..{$row['rgt']}\n";
+    echo "{$row['title']}: {$row['lft']}..{$row['rgt']} root {$row['root']}\n";
 }
 ```
 
@@ -386,9 +391,9 @@ Output:
 2  Clothing  lft  2  rgt  3  lvl 1
 12 Garden    lft  4  rgt  5  lvl 1
 
-Clothing: 1..2
-Electronics: 1..2
-Garden: 1..2
+Clothing: 1..2 root 2
+Electronics: 1..2 root 8
+Garden: 1..2 root 12
 ```
 
 Source: [`examples/outputs-nested-set.php`](../examples/outputs-nested-set.php)
@@ -396,12 +401,17 @@ Source: [`examples/outputs-nested-set.php`](../examples/outputs-nested-set.php)
 
 | Option | Type | Default | Effect |
 |---|---|---|---|
-| `leftField` | `string` | `'lft'` | Field for the left value |
-| `rightField` | `string` | `'rgt'` | Field for the right value |
-| `levelField` | `?string` | `'lvl'` | Field for the level; `null` leaves it out |
+| `fields` | `NestedSetFields` | `lft`, `rgt`, level `lvl`, no root | Fields written — the same object `fromNestedSet()` takes. `level: null` leaves the level out. With a `root` field every root's tree is numbered from 1 and each node gets the id of its root in the output (Gedmo with a `TreeRoot` column); `NestedSetFields::gedmo()` sets `lft`, `rgt`, `root`, `lvl` |
 | `levelBase` | `int` | `0` | Level of roots (Gedmo uses 0; some schemas 1) |
-| `restartPerRoot` | `bool` | `false` | Number every root's tree from 1 (Gedmo with a `TreeRoot` column) |
-| `nodeFactory` | `?Closure(mixed $node, int $left, int $right, int $depth): mixed` | `null` | Builds each output row. Required for object payloads |
+| `nodeFactory` | `?Closure(mixed $node, int $left, int $right, int $depth, mixed $rootId): mixed` | `null` | Builds each output row. Required for object payloads. `$rootId` is null without a root field |
+| `idField` | `string` | `'id'` | Field the root id is read from (only with a root field) |
+| `accessor` | `Accessor` | `AutoAccessor` | Reads the root id |
+
+The root ids are those of the **output** roots: after `depthWindow()` or `Promote`, nodes move to new roots, and a
+round trip through `NestedSetFields::gedmo()` stays valid. Every root needs an int or string id in `idField` (two
+consecutive roots with the same id, or a root without one, throw `InvalidArgumentException`): set `idField` when
+your id column is not `id`. A column that groups several roots, such as a menu id with one numbering per menu, is
+not a root field for the sink — leave `root` out and keep the column with `map()`.
 
 The right value of a node is known only when its subtree ends, so the whole result is collected first. Memory:
 O(output).

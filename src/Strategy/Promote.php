@@ -56,7 +56,7 @@ final readonly class Promote implements FilterStrategy, StreamStrategy
      */
     private static function filter(\Generator $input, \Closure $test, bool $trackAncestors, OnMatch $onMatch): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, int> $kept input depths of kept ancestors; their count is the output depth */
         $kept = [];
         $keptCount = 0;

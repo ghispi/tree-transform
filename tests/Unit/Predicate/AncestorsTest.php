@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Unit\Predicate;
 
+use Ghispi\TreeTransform\Exception\OutOfRangeException;
 use Ghispi\TreeTransform\Predicate\Ancestors;
+use Ghispi\TreeTransform\Predicate\AncestorTracker;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\RunningExample;
 use Ghispi\TreeTransform\Tree;
@@ -12,16 +14,42 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(Ancestors::class)]
+#[CoversClass(AncestorTracker::class)]
 final class AncestorsTest extends TestCase
 {
     private static function at(string ...$path): Ancestors
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         foreach (array_values($path) as $depth => $node) {
             $ancestors->enter($node, $depth);
         }
 
         return $ancestors;
+    }
+
+    public function testOfBuildsAViewOfTheGivenPath(): void
+    {
+        $a = Ancestors::of(['root' => 'A', 'x' => 'B']);
+
+        self::assertCount(2, $a);
+        self::assertSame(['A', 'B'], $a->toArray());
+        self::assertSame('B', $a->parent());
+        self::assertSame('A', $a->at(0));
+        self::assertCount(0, Ancestors::of());
+    }
+
+    public function testTrackerKeepsOneViewUpToDate(): void
+    {
+        $tracker = new AncestorTracker();
+        $view = $tracker->ancestors();
+        $seen = [];
+        foreach ([[0, 'A'], [1, 'B'], [2, 'C'], [1, 'D'], [0, 'E']] as [$depth, $node]) {
+            $tracker->enter($node, $depth);
+            self::assertSame($view, $tracker->ancestors(), 'the same view for every node');
+            $seen[$node] = $view->toArray();
+        }
+
+        self::assertSame(['A' => [], 'B' => ['A'], 'C' => ['A', 'B'], 'D' => ['A'], 'E' => []], $seen);
     }
 
     public function testRootHasNoAncestors(): void
@@ -61,13 +89,13 @@ final class AncestorsTest extends TestCase
     {
         $a = self::at('A', 'B');
 
-        $this->expectException(\OutOfRangeException::class);
+        $this->expectException(OutOfRangeException::class);
         $a->at(1);
     }
 
     public function testAtNegative(): void
     {
-        $this->expectException(\OutOfRangeException::class);
+        $this->expectException(OutOfRangeException::class);
         self::at('A', 'B')->at(-1);
     }
 
@@ -122,7 +150,7 @@ final class AncestorsTest extends TestCase
 
     public function testCountIsNeverNegative(): void
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         $ancestors->enter('A', -1);
 
         self::assertCount(0, $ancestors);

@@ -275,7 +275,7 @@ Source: [`examples/predicates-ancestors.php`](../examples/predicates-ancestors.p
 |---|---|
 | `count($ancestors)` | Number of ancestors; equals the node's depth |
 | `parent()` | The direct parent, or `null` for a root |
-| `at(int $depth)` | The ancestor at that depth (0 = root). Throws `OutOfRangeException` outside `0 .. count() - 1` |
+| `at(int $depth)` | The ancestor at that depth (0 = root). Throws `Exception\OutOfRangeException` outside `0 .. count() - 1` |
 | `some(callable $test)` | True if an ancestor passes. Checks the nearest ancestor first, stops at the first hit |
 | `every(callable $test)` | True if all ancestors pass (true for roots). Checks the nearest ancestor first |
 | `toArray()` | A copy of the ancestors as a list, root first |
@@ -289,6 +289,8 @@ Gotchas:
   `depthWindow(1)`, the old root is no longer an ancestor.
 - With `Promote`, ancestors include the nodes that are being removed. That is what makes "hide everything under an
   unpublished section" work, as in the example above.
+- To test a predicate on its own, build a view with `Ancestors::of([$root, $parent])` and call
+  `$predicate->matches($node, 2, $ancestors)`.
 
 ## Writing your own
 

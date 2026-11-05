@@ -2,6 +2,6 @@
 2  Clothing  lft  2  rgt  3  lvl 1
 12 Garden    lft  4  rgt  5  lvl 1
 
-Clothing: 1..2
-Electronics: 1..2
-Garden: 1..2
+Clothing: 1..2 root 2
+Electronics: 1..2 root 8
+Garden: 1..2 root 12

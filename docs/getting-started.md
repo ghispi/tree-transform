@@ -158,6 +158,7 @@ Source: [`examples/getting-started-formats.php`](../examples/getting-started-for
 | Materialized path | `Tree::fromMaterializedPath($rows, $fields)` | ordered by path, binary collation | O(depth) |
 | Nested arrays / objects | `Tree::fromNestedArray($roots, 'children')` | — | O(depth) |
 | `depth => node` stream | `Tree::fromDepthList($entries)` | pre-order | O(1) |
+| `toFlatList()` output | `Tree::fromFlatList($entries)` | pre-order | O(1) |
 | Any `Source` | `Tree::from($source)`, `Tree::lazy(fn() => $source)` | — | — |
 
 Field names, root handling, orphans and other options are on the [Sources](sources.md) page. Using Doctrine

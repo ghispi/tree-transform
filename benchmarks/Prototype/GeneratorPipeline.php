@@ -73,7 +73,7 @@ final class GeneratorPipeline
      */
     public static function pruneSend(\Generator $input, \Closure $test): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         while ($input->valid()) {
             $depth = $input->key();
             $node = $input->current();
@@ -144,7 +144,7 @@ final class GeneratorPipeline
      */
     public static function pruneFlag(\Generator $input, SkipFlag $flag, \Closure $test): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         foreach ($input as $depth => $node) {
             if (!$test($node, $depth, $ancestors)) {
                 $flag->skip = true;
@@ -164,7 +164,7 @@ final class GeneratorPipeline
      */
     public static function keepAncestors(\Generator $input, \Closure $test): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         $path = [];
         $emitted = 0;
         foreach ($input as $depth => $node) {

@@ -66,7 +66,7 @@ final readonly class Placeholder implements FilterStrategy, StreamStrategy
         \Closure $factory,
         OnMatch $onMatch,
     ): \Generator {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, int> $runs removed siblings waiting for their placeholder, indexed by depth */
         $runs = [];
         // Deepest depth that may have a pending run.

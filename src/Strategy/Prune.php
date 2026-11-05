@@ -53,7 +53,7 @@ final readonly class Prune implements FilterStrategy, StreamStrategy
      */
     private static function filter(\Generator $input, \Closure $test, bool $trackAncestors, OnMatch $onMatch): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         // Depth of a match whose subtree is kept untested (OnMatch::KeepDescendants), or -1.
         $keepBelow = -1;
         while ($input->valid()) {

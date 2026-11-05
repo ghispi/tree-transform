@@ -24,9 +24,9 @@ final readonly class FieldIn implements Predicate
     /**
      * @param iterable<int|string> $values
      */
-    public function __construct(string $field, iterable $values, ?Accessor $accessor = null)
+    public function __construct(string $field, iterable $values, Accessor $accessor = new AutoAccessor())
     {
-        $this->read = ($accessor ?? new AutoAccessor())->reader($field);
+        $this->read = $accessor->reader($field);
         $set = [];
         foreach ($values as $value) {
             // @phpstan-ignore booleanAnd.alwaysFalse, function.alreadyNarrowedType (guards untyped callers)

@@ -21,9 +21,9 @@ final readonly class FieldEquals implements Predicate
     /** The value as an integer string when it is an integer or integer string, else null. */
     private ?string $numeric;
 
-    public function __construct(string $field, private mixed $value, ?Accessor $accessor = null)
+    public function __construct(string $field, private mixed $value, Accessor $accessor = new AutoAccessor())
     {
-        $this->read = ($accessor ?? new AutoAccessor())->reader($field);
+        $this->read = $accessor->reader($field);
         $this->numeric = \is_int($value) || (\is_string($value) && preg_match('/^-?[0-9]+$/', $value) === 1)
             ? (string) $value
             : null;

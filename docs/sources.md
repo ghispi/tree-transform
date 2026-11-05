@@ -400,7 +400,8 @@ descend at all, so a lazily loaded Doctrine collection under a pruned node is ne
 ## Depth lists
 
 Pre-order `(depth, node)` entries: the library's interchange format. `DepthListSource::pairs()` reads
-`[depth, node]` pairs; `DepthListSource::keyed()` (and `Tree::fromDepthList()`) reads `depth => node` keys, as
+`[depth, node]` pairs, or `['depth' => …, 'node' => …]` entries as written by `toFlatList()` (also
+`Tree::fromFlatList()`); `DepthListSource::keyed()` (and `Tree::fromDepthList()`) reads `depth => node` keys, as
 produced by `Tree::iterate()`. That lets one pipeline feed another.
 
 <!-- example: sources-depth-list -->

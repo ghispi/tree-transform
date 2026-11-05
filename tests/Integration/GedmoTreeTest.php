@@ -8,7 +8,7 @@ use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\QueryBuilder;
 use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
 use Ghispi\TreeTransform\Bridge\Gedmo\Hydration;
-use Ghispi\TreeTransform\Bridge\Gedmo\TreeConfig;
+use Ghispi\TreeTransform\Bridge\Gedmo\TreeStrategy;
 use Ghispi\TreeTransform\Source\NestedSetFields;
 use Ghispi\TreeTransform\Source\NestedSetSource;
 use Ghispi\TreeTransform\Strategy\KeepAncestors;
@@ -25,13 +25,13 @@ final class GedmoTreeTest extends GedmoTestCase
     private const string FULL = 'A .B ..C ..D ...E .F ..G H .I';
 
     /**
-     * @return iterable<string, array{class-string, \Closure(string, bool, ?TestNode): TestNode, string}>
+     * @return iterable<string, array{class-string, \Closure(string, bool, ?TestNode): TestNode, TreeStrategy}>
      */
     public static function strategies(): iterable
     {
-        yield 'nested set' => [NestedCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new NestedCategory($t, $v, $p instanceof NestedCategory ? $p : null), TreeConfig::NESTED];
-        yield 'materialized path' => [PathCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new PathCategory($t, $v, $p instanceof PathCategory ? $p : null), TreeConfig::MATERIALIZED_PATH];
-        yield 'closure' => [ClosureCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new ClosureCategory($t, $v, $p instanceof ClosureCategory ? $p : null), TreeConfig::CLOSURE];
+        yield 'nested set' => [NestedCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new NestedCategory($t, $v, $p instanceof NestedCategory ? $p : null), TreeStrategy::Nested];
+        yield 'materialized path' => [PathCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new PathCategory($t, $v, $p instanceof PathCategory ? $p : null), TreeStrategy::MaterializedPath];
+        yield 'closure' => [ClosureCategory::class, static fn(string $t, bool $v, ?TestNode $p): TestNode => new ClosureCategory($t, $v, $p instanceof ClosureCategory ? $p : null), TreeStrategy::Closure];
     }
 
     /**
@@ -39,11 +39,13 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode       $make
      */
     #[DataProvider('strategies')]
-    public function testReadsConfiguration(string $class, \Closure $make, string $strategy): void
+    public function testReadsConfiguration(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $config = (new GedmoTree($this->em))->config($class);
 
         self::assertSame($strategy, $config->strategy);
+        self::assertInstanceOf(TreeStrategy::class, $config->strategy);
+        self::assertSame($strategy, TreeStrategy::from($strategy->value), 'enum values are Gedmo strategy names');
         self::assertSame('id', $config->id);
         self::assertSame('parent', $config->parent);
     }
@@ -53,7 +55,7 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode $make
      */
     #[DataProvider('strategies')]
-    public function testLoadsWholeTreeAsArrays(string $class, \Closure $make, string $strategy): void
+    public function testLoadsWholeTreeAsArrays(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $nodes = $this->persistExample($make);
         $tree = (new GedmoTree($this->em))->tree($class);
@@ -70,7 +72,7 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode $make
      */
     #[DataProvider('strategies')]
-    public function testLoadsEntities(string $class, \Closure $make, string $strategy): void
+    public function testLoadsEntities(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $this->persistExample($make);
         $tree = (new GedmoTree($this->em))->tree($class, hydration: Hydration::Entities);
@@ -86,7 +88,7 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode $make
      */
     #[DataProvider('strategies')]
-    public function testFiltersWithStrategies(string $class, \Closure $make, string $strategy): void
+    public function testFiltersWithStrategies(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $this->persistExample($make);
         $tree = (new GedmoTree($this->em))->tree($class);
@@ -102,7 +104,7 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode $make
      */
     #[DataProvider('strategies')]
-    public function testLoadsSubtreeWithMaxDepth(string $class, \Closure $make, string $strategy): void
+    public function testLoadsSubtreeWithMaxDepth(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $nodes = $this->persistExample($make);
         $gedmo = new GedmoTree($this->em);
@@ -117,7 +119,7 @@ final class GedmoTreeTest extends GedmoTestCase
      * @param \Closure(string, bool, ?TestNode): TestNode $make
      */
     #[DataProvider('strategies')]
-    public function testActiveTrail(string $class, \Closure $make, string $strategy): void
+    public function testActiveTrail(string $class, \Closure $make, TreeStrategy $strategy): void
     {
         $nodes = $this->persistExample($make);
         $gedmo = new GedmoTree($this->em);
@@ -130,6 +132,53 @@ final class GedmoTreeTest extends GedmoTestCase
         \assert($b !== null);
         self::assertSame('A .B ..C ..D ...E .F H', self::outline($gedmo->activeTrail($class, $b, activeChildrenDepth: 2)->iterate()));
         self::assertSame('A .B ..C ..D .F H', self::outline($gedmo->activeTrail($class, $b, hydration: Hydration::Entities)->iterate()));
+    }
+
+    /**
+     * With modify the menu equals the ActiveTrail of tree(modify): rows removed in SQL move their children up (nested
+     * set, materialized path) or drop them (closure), including below ancestors' siblings and removed roots.
+     *
+     * @param class-string                            $class
+     * @param \Closure(string, bool, ?TestNode): TestNode $make
+     */
+    #[DataProvider('strategies')]
+    public function testActiveTrailWithModify(string $class, \Closure $make, TreeStrategy $strategy): void
+    {
+        $nodes = $this->persistExample($make);
+        $gedmo = new GedmoTree($this->em);
+        $e = $nodes['E']->getId();
+        \assert($e !== null);
+        $without = static fn(string $title): \Closure => static fn(QueryBuilder $qb, string $a) => $qb->andWhere("{$a}.title != '{$title}'");
+        $closure = $strategy === TreeStrategy::Closure;
+        $expected = [
+            // An ancestor of the active node is removed.
+            'B' => $closure ? 'A H' : 'A .C .D ..E .F H',
+            // A sibling of an ancestor is removed: its children become siblings on the trail.
+            'F' => $closure ? 'A .B ..C ..D ...E H' : 'A .B ..C ..D ...E .G H',
+            // A root is removed: its children become roots.
+            'H' => $closure ? 'A .B ..C ..D ...E .F' : 'A .B ..C ..D ...E .F I',
+            // The active node itself is removed: no node is active, only the roots remain.
+            'E' => 'A H',
+        ];
+        foreach ($expected as $title => $outline) {
+            $modify = $without($title);
+            $menu = $gedmo->activeTrail($class, $e, modify: $modify);
+            self::assertSame($outline, self::outline($menu->iterate()), "without {$title}");
+            $isActive = static fn(array $node): bool => $node['id'] === $e;
+            self::assertSame(
+                self::outline($gedmo->tree($class, modify: $modify)->activeTrail($isActive, multiple: false)->iterate()),
+                self::outline($menu->iterate()),
+                "without {$title}: same as tree(modify) + ActiveTrail",
+            );
+        }
+        // Other options still apply.
+        self::assertSame($closure ? '' : 'A .D ..E', self::outline($gedmo->activeTrail($class, $e, siblings: false, modify: $without('B'))->iterate()));
+        $b = $nodes['B']->getId();
+        \assert($b !== null);
+        self::assertSame(
+            $closure ? 'A .B ..C .F H' : 'A .B ..C ..E .F H',
+            self::outline($gedmo->activeTrail($class, $b, activeChildrenDepth: 1, hydration: Hydration::Entities, modify: $without('D'))->iterate()),
+        );
     }
 
     public function testActiveTrailLoadsOnlyNeededNestedSetRows(): void

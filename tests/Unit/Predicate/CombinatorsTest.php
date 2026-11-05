@@ -22,12 +22,12 @@ final class CombinatorsTest extends TestCase
 {
     private static function test(Predicate $p, mixed $node = null, int $depth = 0): bool
     {
-        return $p->matches($node, $depth, new Ancestors());
+        return $p->matches($node, $depth, Ancestors::of());
     }
 
     public function testCallbackPassesAllArguments(): void
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         $seen = [];
         $p = new Callback(static function (mixed $n, int $d, Ancestors $a) use (&$seen): bool {
             $seen = [$n, $d, $a];

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Predicate\Ancestors;
+use Ghispi\TreeTransform\Predicate\AncestorTracker;
 use Ghispi\TreeTransform\Predicate\Predicate;
 use Ghispi\TreeTransform\Strategy\FilterStrategy;
 use Ghispi\TreeTransform\Tree;
@@ -29,7 +29,7 @@ final readonly class FirstPerRoot implements FilterStrategy
 
 final class FirstPerRootCursor implements Cursor
 {
-    private readonly Ancestors $ancestors;
+    private readonly AncestorTracker $ancestors;
 
     private int $kept = 0;
 
@@ -38,7 +38,7 @@ final class FirstPerRootCursor implements Cursor
         private readonly Predicate $predicate,
         private readonly int $max,
     ) {
-        $this->ancestors = new Ancestors();
+        $this->ancestors = new AncestorTracker();
     }
 
     public function next(): bool
@@ -54,7 +54,7 @@ final class FirstPerRootCursor implements Cursor
             }
             $node = $this->input->node();
             $this->ancestors->enter($node, $depth); // keep the Ancestors view up to date for the predicate
-            if (!$this->predicate->matches($node, $depth, $this->ancestors)) {
+            if (!$this->predicate->matches($node, $depth, $this->ancestors->ancestors())) {
                 $this->input->skipSubtree();
                 continue;
             }

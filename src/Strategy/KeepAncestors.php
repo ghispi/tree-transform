@@ -56,7 +56,7 @@ final readonly class KeepAncestors implements FilterStrategy, StreamStrategy
      */
     private static function filter(\Generator $input, \Closure $test, bool $trackAncestors, OnMatch $onMatch): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, mixed> $path current input path, indexed by depth */
         $path = [];
         // Number of nodes at the top of the path that were already emitted.

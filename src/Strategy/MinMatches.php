@@ -74,7 +74,7 @@ final readonly class MinMatches implements FilterStrategy, StreamStrategy
      */
     private static function filter(\Generator $input, \Closure $test, bool $trackAncestors, int $min): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, mixed> $queueNodes */
         $queueNodes = [];
         /** @var array<int, int> $queueDepths */

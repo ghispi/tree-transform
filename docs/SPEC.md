@@ -163,7 +163,7 @@ resolved once per class), so most users never configure one.
 | `NestedArraySource` | nested arrays / iterables / Doctrine collections | stack | does not descend | O(depth) |
 | `PreorderedAdjacencySource` | rows already in pre-order with `parent` (e.g. Gedmo nested set queried with parent) | stack of ids | skips by depth | O(depth) |
 | `AdjacencyListSource` | any order | built index | does not descend | **O(n)** (index of int offsets, no objects) |
-| `DepthListSource` | `DepthListSource::keyed()` (depth => node) or `::pairs()` (`[depth, node]`) | given | skips by depth | O(1) |
+| `DepthListSource` | `DepthListSource::keyed()` (depth => node) or `::pairs()` (`[depth, node]` or `toFlatList()` entries, also `Tree::fromFlatList()`) | given | skips by depth | O(1) |
 | `LazySource` | a factory `fn (): Source` called on every `open()` — makes DB queries/generators re-readable | — | — | — |
 
 Details:
@@ -304,8 +304,13 @@ final class Ancestors implements \Countable, \IteratorAggregate
     public function every(callable $test): bool;
     public function toArray(): array;                // list, root first — copy it to keep it
     public function getIterator(): \Generator;       // root first
+    public static function of(iterable $path = []): self; // a fixed view, for testing predicates
 }
 ```
+
+The view is read-only for user code. Custom strategies keep one up to date with `AncestorTracker`
+(`enter($node, $depth)` before each test, `ancestors()` for the view); the constructor is private and the mutator
+is `@internal`, so the representation can change.
 
 - Lazy and cheap: the filter stage keeps the ancestors in a depth-indexed array it overwrites as it goes
   (`$path[$depth] = $node`: one array write per node, O(depth) memory). No list is built unless the predicate calls
@@ -336,7 +341,7 @@ $tree->filter(fn (array $n, int $d, Ancestors $a) => $n['published'] && $a->ever
 | `FlatListSink` | `list<array{depth, node}>` | O(output) |
 | `NestedArraySink` | nested arrays, configurable children key (`children`, Gedmo's `__children`), option to omit empty children | O(output) |
 | `AdjacencyListSink` | flat list with **rewritten** parent ids (matters after `Promote`) | O(output) |
-| `NestedSetSink` | flat list in pre-order with **recomputed** `lft` / `rgt` / `level` | O(output) |
+| `NestedSetSink` | flat list in pre-order with **recomputed** `lft` / `rgt` / `level`; with a root field, numbered per root and the output root's id written (every root needs its own id) | O(output) |
 | `CountSink` | node count | O(1) |
 
 Building nested arrays uses a stack of child lists that are attached to the parent when a level closes — no PHP
@@ -366,7 +371,7 @@ $menu = Tree::fromNestedSet($rows, NestedSetFields::gedmo())
     ->filter(fn (array $n) => str_contains($n['title'], $q), new KeepAncestors(OnMatch::KeepDescendants))
     ->maxDepth(3)
     ->map(fn (array $n, int $depth) => ['id' => $n['id'], 'label' => $n['title']])
-    ->toNestedArray(childrenKey: 'children');
+    ->toNestedArray(childrenField: 'children');
 ```
 
 Named constructors: `fromNestedSet`, `fromAdjacencyList`, `fromPreorderedAdjacencyList`, `fromMaterializedPath`,
@@ -380,8 +385,13 @@ The facade is sugar only; every piece is usable standalone.
 ## 9. Doctrine / Gedmo bridge (`Ghispi\TreeTransform\Bridge\Gedmo`)
 
 - **API**: `new GedmoTree($em)`; `tree($class, root, maxDepth, hydration, modify)`; `activeTrail($class, $active,
-  siblings, activeChildrenDepth, hydration)`; `config($class): TreeConfig`. Both return a lazy `Tree` whose query runs
-  on every read (`LazySource`).
+  siblings, activeChildrenDepth, hydration, modify)`; `config($class): TreeConfig`. Both return a lazy `Tree` whose
+  query runs on every read (`LazySource`). `TreeConfig` is a readonly value object users only read (constructor and
+  `read()` are `@internal`; properties may be added in minor releases); `TreeConfig::$strategy` is the
+  `TreeStrategy` enum (`Nested`/`Closure`/`MaterializedPath`, backed by Gedmo's strategy names).
+- **`activeTrail()`**: one active node, so always `multiple: false`. `modify` means the same as in `tree()`; the
+  result equals `tree($class, modify: …)` + `ActiveTrail`. With `modify` the nested set pushdown is not used (removed
+  rows promote their children, so the needed rows cannot be selected in advance).
 - **Auto-configuration**: reads the Gedmo tree configuration for an entity class (strategy and field names —
   left/right/level/root/parent/path/separator/closure class) from the `TreeListener` found on the entity manager.
   Structural values are selected as scalar columns next to the node (`tt_left`, `tt_parent`, …), read with an
@@ -492,7 +502,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 
 | # | Step | Done when | Release |
 |---|---|---|---|
-| 1 | **API audit.** List every public symbol (classes, methods, constructor parameters — named arguments make parameter names part of the API — enum cases, exception classes). Check naming consistency across `Tree`, sources, strategies, stages, sinks and the bridge; that `final`/`readonly` is applied; that every `Internal\*` type and `@internal` method stays out of public signatures. Independent review by `tree-semantics-reviewer`. | `docs/api.md` lists the public API; renames/removals done, each in `CHANGELOG.md` with the migration | 0.3.0 |
+| 1 | **API audit** (done).  List every public symbol (classes, methods, constructor parameters — named arguments make parameter names part of the API — enum cases, exception classes). Check naming consistency across `Tree`, sources, strategies, stages, sinks and the bridge; that `final`/`readonly` is applied; that every `Internal\*` type and `@internal` method stays out of public signatures. Independent review by `tree-semantics-reviewer`. | `docs/api.md` lists the public API; renames/removals done, each in `CHANGELOG.md` with the migration | 0.3.0 |
 | 2 | **BC policy.** Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
 | 3 | **Spec matches CI.** §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
 | 4 | **Mutation survivors.** Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |

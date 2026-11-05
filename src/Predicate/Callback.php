@@ -25,6 +25,8 @@ final readonly class Callback implements Predicate
     }
 
     /**
+     * @internal used to compile predicates; not covered by the BC promise
+     *
      * The wrapped closure.
      */
     public function closure(): \Closure

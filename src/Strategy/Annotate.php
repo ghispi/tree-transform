@@ -69,7 +69,7 @@ final readonly class Annotate implements FilterStrategy, StreamStrategy
      */
     private static function annotate(\Generator $input, \Closure $test, bool $trackAncestors, \Closure $combine): \Generator
     {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, mixed> $queueNodes */
         $queueNodes = [];
         /** @var array<int, int> $queueDepths */

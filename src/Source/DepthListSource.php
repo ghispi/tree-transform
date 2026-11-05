@@ -13,7 +13,8 @@ use Ghispi\TreeTransform\Internal\StreamSource;
 /**
  * Reads a pre-order list of (depth, node) entries: the interchange format of this library.
  *
- * - DepthListSource::pairs([[0, $a], [1, $b]]) reads [depth, node] pairs;
+ * - DepthListSource::pairs([[0, $a], [1, $b]]) reads [depth, node] pairs, or ['depth' => …, 'node' => …] entries
+ *   as written by Tree::toFlatList() (an entry with both kinds of keys is read as a pair);
  * - DepthListSource::keyed($generator) reads depth => node keys, e.g. the output of Tree::iterate().
  *
  * Depths are validated (first 0, then at most previous + 1). Memory: O(1).
@@ -26,7 +27,7 @@ final readonly class DepthListSource implements Source, StreamSource
     private function __construct(private iterable $entries, private bool $keyed) {}
 
     /**
-     * @param iterable<array{0: int, 1: mixed}> $pairs
+     * @param iterable<array{0: int, 1: mixed}|array{depth: int, node: mixed}> $pairs
      */
     public static function pairs(iterable $pairs): self
     {
@@ -70,10 +71,17 @@ final readonly class DepthListSource implements Source, StreamSource
                 $depth = $key;
                 $node = $entry;
             } else {
-                if (!\is_array($entry) || !\array_key_exists(0, $entry) || !\array_key_exists(1, $entry)) {
-                    throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs.');
+                if (!\is_array($entry)) {
+                    throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].');
                 }
-                [$depth, $node] = $entry;
+                if (\array_key_exists(0, $entry) && \array_key_exists(1, $entry)) {
+                    [$depth, $node] = $entry;
+                } elseif (\array_key_exists('depth', $entry) && \array_key_exists('node', $entry)) {
+                    $depth = $entry['depth'];
+                    $node = $entry['node'];
+                } else {
+                    throw InvalidTreeException::at(null, 'entries must be [depth, node] pairs or [\'depth\' => …, \'node\' => …].');
+                }
             }
             if (!\is_int($depth) || $depth < 0 || $depth > $previous + 1) {
                 throw InvalidTreeException::at(null, \sprintf(

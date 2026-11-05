@@ -24,7 +24,7 @@ final class PruneNoAncestorsCursor implements Cursor
         private readonly Predicate $predicate,
         private readonly OnMatch $onMatch = OnMatch::EvaluateDescendants,
     ) {
-        $this->ancestors = new Ancestors();
+        $this->ancestors = Ancestors::of();
     }
 
     public function next(): bool

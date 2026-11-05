@@ -9,6 +9,8 @@ use Ghispi\TreeTransform\Sink\AdjacencyListSink;
 use Ghispi\TreeTransform\Sink\CountSink;
 use Ghispi\TreeTransform\Sink\FlatListSink;
 use Ghispi\TreeTransform\Sink\NestedSetSink;
+use Ghispi\TreeTransform\Source\AdjacencyListFields;
+use Ghispi\TreeTransform\Source\NestedSetFields;
 use Ghispi\TreeTransform\Strategy\Promote;
 use Ghispi\TreeTransform\Tests\Fixtures\Field;
 use Ghispi\TreeTransform\Tests\Fixtures\Model\GetterNode;
@@ -52,7 +54,7 @@ final class FlatSinksTest extends TestCase
 
     public function testAdjacencyListFieldNamesAndRootParent(): void
     {
-        $rows = self::promoted()->map(static fn(mixed $n): array => ['key' => Field::id($n)])->toAdjacencyList('key', 'up', 0);
+        $rows = self::promoted()->map(static fn(mixed $n): array => ['key' => Field::id($n)])->toAdjacencyList(new AdjacencyListFields('key', 'up'), rootParent: 0);
 
         self::assertSame([['key' => 'A', 'up' => 0], ['key' => 'C', 'up' => 'A'], ['key' => 'E', 'up' => 'A'], ['key' => 'I', 'up' => 0]], $rows);
     }
@@ -67,7 +69,7 @@ final class FlatSinksTest extends TestCase
 
     public function testAdjacencyListReadsIdsWithTheGivenAccessor(): void
     {
-        $sink = new AdjacencyListSink('id', nodeFactory: static fn(mixed $n, mixed $parent): mixed => $parent, accessor: new \Ghispi\TreeTransform\Accessor\GetterAccessor());
+        $sink = new AdjacencyListSink(nodeFactory: static fn(mixed $n, mixed $parent): mixed => $parent, accessor: new \Ghispi\TreeTransform\Accessor\GetterAccessor());
         $rows = Tree::fromNestedArray([new GetterNode('a', children: [new GetterNode('b')])])->into($sink);
 
         self::assertSame([null, 'a'], $rows);
@@ -102,16 +104,68 @@ final class FlatSinksTest extends TestCase
 
     public function testNestedSetRestartPerRootAndLevelBase(): void
     {
-        $rows = self::promoted()->toNestedSet('l', 'r', 'level', 1, true);
+        $rows = self::promoted()->toNestedSet(new NestedSetFields('l', 'r', 'root', 'level'), 1);
 
         self::assertSame(['A' => 1, 'C' => 2, 'E' => 4, 'I' => 1], self::column($rows, 'l'));
         self::assertSame(['A' => 6, 'C' => 3, 'E' => 5, 'I' => 2], self::column($rows, 'r'));
         self::assertSame(['A' => 1, 'C' => 2, 'E' => 2, 'I' => 1], self::column($rows, 'level'));
+        self::assertSame(['A' => 'A', 'C' => 'A', 'E' => 'A', 'I' => 'I'], self::column($rows, 'root'), 'new root ids after Promote');
+    }
+
+    /**
+     * @return array<string, array{0: list<mixed>, 1: string}>
+     */
+    public static function invalidRootIds(): array
+    {
+        return [
+            'root without id' => [[['n' => 'a']], 'needs an int, string or Stringable id for every root to write the root field "root"; got null'],
+            'float id' => [[['id' => 1.5]], 'got float'],
+            'array id' => [[['id' => [1]]], 'got array'],
+            'same id twice' => [[['id' => 5], ['id' => '5']], 'two consecutive roots have the root id 5'],
+        ];
+    }
+
+    /**
+     * @param list<mixed> $roots
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidRootIds')]
+    public function testNestedSetRejectsUnusableRootIds(array $roots, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+        Tree::fromNestedArray($roots)->toNestedSet(NestedSetFields::gedmo());
+    }
+
+    public function testNestedSetAcceptsStringableAndRepeatedNonAdjacentRootIds(): void
+    {
+        $id = new class implements \Stringable {
+            public function __toString(): string
+            {
+                return 'r';
+            }
+        };
+        $rows = Tree::fromNestedArray([['id' => $id], ['id' => 2], ['id' => 'r']])->toNestedSet(new NestedSetFields(root: 'root'));
+
+        self::assertSame([1, 1, 1], array_column($rows, 'lft'));
+        self::assertSame([$id, 2, 'r'], array_column($rows, 'root'));
+    }
+
+    public function testNestedSetRootIdsThroughIdFieldAndNodeFactory(): void
+    {
+        $rows = self::promoted()
+            ->map(static fn(mixed $n): array => ['key' => Field::id($n)])
+            ->toNestedSet(
+                new NestedSetFields(root: 'tree'),
+                nodeFactory: static fn(array $n, int $l, int $r, int $d, mixed $root): array => [$n['key'], $root],
+                idField: 'key',
+            );
+
+        self::assertSame([['A', 'A'], ['C', 'A'], ['E', 'A'], ['I', 'I']], $rows);
     }
 
     public function testNestedSetWithoutLevelField(): void
     {
-        $rows = Tree::fromDepthList([['id' => 'a']])->toNestedSet(levelField: null);
+        $rows = Tree::fromDepthList([['id' => 'a']])->toNestedSet(new NestedSetFields());
 
         self::assertSame([['id' => 'a', 'lft' => 1, 'rgt' => 2]], $rows);
     }

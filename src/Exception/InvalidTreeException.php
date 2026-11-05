@@ -9,9 +9,25 @@ namespace Ghispi\TreeTransform\Exception;
  */
 class InvalidTreeException extends \UnexpectedValueException implements TreeTransformException
 {
+    private mixed $nodeId = null;
+
+    /**
+     * For custom sources: an error about the node with the given id (null when it is not known).
+     */
     public static function at(mixed $id, string $problem): self
     {
-        return new self(\sprintf('Invalid tree at node %s: %s', self::describe($id), $problem));
+        $exception = new self(\sprintf('Invalid tree at node %s: %s', self::describe($id), $problem));
+        $exception->nodeId = $id;
+
+        return $exception;
+    }
+
+    /**
+     * Id of the offending node as read from the input, or null when the error is not about one node.
+     */
+    public function nodeId(): mixed
+    {
+        return $this->nodeId;
     }
 
     protected static function describe(mixed $id): string

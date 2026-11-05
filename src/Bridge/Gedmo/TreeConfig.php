@@ -8,23 +8,24 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Gedmo\Tree\TreeListener;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
+use Ghispi\TreeTransform\Exception\LogicException;
 
 /**
  * Tree configuration of one entity class, read from the Gedmo TreeListener and Doctrine metadata.
+ *
+ * Obtain it with GedmoTree::config() and read its properties. New properties may be added in minor releases.
  */
 final readonly class TreeConfig
 {
-    public const string NESTED = 'nested';
-    public const string CLOSURE = 'closure';
-    public const string MATERIALIZED_PATH = 'materializedPath';
-
     /**
+     * @internal created by GedmoTree via read()
+     *
      * @param class-string      $class
      * @param class-string|null $closureClass
      */
     public function __construct(
         public string $class,
-        public string $strategy,
+        public TreeStrategy $strategy,
         public string $id,
         public ?string $parent,
         public ?string $left = null,
@@ -39,16 +40,20 @@ final readonly class TreeConfig
     ) {}
 
     /**
+     * @internal use GedmoTree::config()
+     *
      * @param class-string $class
      */
     public static function read(EntityManagerInterface $em, TreeListener $listener, string $class): self
     {
         $meta = $em->getClassMetadata($class);
         $config = $listener->getConfiguration($em, $meta->getName());
-        $strategy = $config['strategy'] ?? null;
-        if (!\is_string($strategy)) {
+        $name = $config['strategy'] ?? null;
+        if (!\is_string($name)) {
             throw new InvalidArgumentException(\sprintf('%s has no Gedmo tree mapping.', $class));
         }
+        $strategy = TreeStrategy::tryFrom($name)
+            ?? throw new LogicException(\sprintf('Unsupported Gedmo tree strategy "%s".', $name));
         $string = static fn(string $key): ?string => isset($config[$key]) && \is_string($config[$key]) ? $config[$key] : null;
         $root = $string('root');
         /** @var class-string|null $closure */

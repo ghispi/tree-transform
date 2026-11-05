@@ -82,7 +82,7 @@ final readonly class ActiveTrail implements FilterStrategy, StreamStrategy
         int $activeChildrenDepth,
         bool $multiple,
     ): \Generator {
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
         /** @var array<int, mixed> $path current input path, indexed by depth */
         $path = [];
         /** @var array<int, bool> $emitted whether each path node has been emitted */

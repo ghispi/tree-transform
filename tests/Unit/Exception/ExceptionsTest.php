@@ -9,6 +9,7 @@ use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Exception\LogicException;
 use Ghispi\TreeTransform\Exception\OrphanNodeException;
+use Ghispi\TreeTransform\Exception\OutOfRangeException;
 use Ghispi\TreeTransform\Exception\TreeTransformException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -16,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(CycleDetectedException::class)]
 #[CoversClass(InvalidTreeException::class)]
 #[CoversClass(OrphanNodeException::class)]
+#[CoversClass(OutOfRangeException::class)]
 final class ExceptionsTest extends TestCase
 {
     public function testEveryExceptionImplementsTheMarker(): void
@@ -26,12 +28,25 @@ final class ExceptionsTest extends TestCase
             InvalidTreeException::at(1, 'x'),
             new InvalidArgumentException(),
             new LogicException(),
+            new OutOfRangeException(),
         ] as $exception) {
             self::assertInstanceOf(TreeTransformException::class, $exception);
         }
         self::assertInstanceOf(\UnexpectedValueException::class, InvalidTreeException::at(1, 'x'));
         self::assertInstanceOf(InvalidTreeException::class, CycleDetectedException::forIds([1]));
         self::assertInstanceOf(InvalidTreeException::class, OrphanNodeException::forParent(1, 1));
+    }
+
+    public function testExceptionsExposeTheirData(): void
+    {
+        self::assertSame(range(1, 12), CycleDetectedException::forIds(range(1, 12))->ids(), 'all ids, not only the ten shown');
+        $orphan = OrphanNodeException::forParent('x', 3);
+        self::assertSame('x', $orphan->parentId());
+        self::assertSame(3, $orphan->childCount());
+        self::assertSame(7, InvalidTreeException::at(7, 'x')->nodeId());
+        self::assertNull(InvalidTreeException::at(null, 'x')->nodeId());
+        self::assertNull(CycleDetectedException::forIds([1])->nodeId());
+        self::assertInstanceOf(\OutOfRangeException::class, new OutOfRangeException());
     }
 
     public function testCycleMessageShowsAtMostTenIds(): void

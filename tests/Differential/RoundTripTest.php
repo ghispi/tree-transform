@@ -41,7 +41,7 @@ final class RoundTripTest extends TestCase
             self::assertSame([], Trees::nestedSetProblems($nestedSet), "toNestedSet valid, {$context}");
             self::assertSame($expected, Trees::signature(Trees::pairs(Tree::fromNestedSet($nestedSet))), "nested set, {$context}");
 
-            $perRoot = Tree::from($source())->toNestedSet(restartPerRoot: true);
+            $perRoot = Tree::from($source())->toNestedSet(new NestedSetFields(root: 'root', level: 'lvl'));
             self::assertSame([], Trees::nestedSetProblems($perRoot, perRoot: true), "toNestedSet per root valid, {$context}");
             self::assertSame(
                 $expected,
@@ -58,7 +58,7 @@ final class RoundTripTest extends TestCase
             );
             self::assertSame($expected, Trees::signature(Trees::pairs(Tree::fromPreorderedAdjacencyList($adjacency))), "pre-ordered adjacency, {$context}");
 
-            $nested = Tree::from($source())->toNestedArray(childrenKey: 'kids');
+            $nested = Tree::from($source())->toNestedArray(childrenField: 'kids');
             self::assertSame($expected, Trees::signature(Trees::pairs(Tree::fromNestedArray($nested, 'kids'))), "nested array, {$context}");
 
             $depthList = Tree::fromDepthList(Tree::from($source())->iterate());
@@ -80,17 +80,10 @@ final class RoundTripTest extends TestCase
         self::assertSame([], Trees::nestedSetProblems($nestedSet), $tree->describe());
         self::assertSame($expected, Trees::signature(Trees::pairs(Tree::fromNestedSet($nestedSet))), $tree->describe());
 
-        // Per-root numbering needs the new root of each node: tag it while streaming.
-        $root = null;
+        // Per-root numbering: the sink writes each node's new root id.
         $perRoot = $promoted
-            ->map(static function (mixed $n, int $depth) use (&$root): array {
-                if ($depth === 0) {
-                    $root = Field::id($n);
-                }
-
-                return ['id' => Field::id($n), 'w' => Field::int($n, 'w'), 'root' => $root];
-            })
-            ->toNestedSet(levelField: 'level', levelBase: 1, restartPerRoot: true);
+            ->map(static fn(mixed $n): array => ['id' => Field::id($n), 'w' => Field::int($n, 'w')])
+            ->toNestedSet(new NestedSetFields(root: 'root', level: 'level'), levelBase: 1);
         self::assertSame([], Trees::nestedSetProblems($perRoot, true, level: 'level', levelBase: 1), $tree->describe());
         self::assertSame($expected, Trees::signature(Trees::pairs(Tree::fromNestedSet($perRoot, NestedSetFields::gedmo()))), $tree->describe());
     }

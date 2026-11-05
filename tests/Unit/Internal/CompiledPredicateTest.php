@@ -92,7 +92,7 @@ final class CompiledPredicateTest extends TestCase
     public function testOfCallsMatchesOfOtherPredicates(): void
     {
         $test = CompiledPredicate::of(new DepthRange(1, 2))->test;
-        $ancestors = new Ancestors();
+        $ancestors = Ancestors::of();
 
         self::assertFalse($test(null, 0, $ancestors));
         self::assertTrue($test(null, 1, $ancestors));

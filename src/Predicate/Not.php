@@ -20,6 +20,8 @@ final readonly class Not implements Predicate
     }
 
     /**
+     * @internal used to compile predicates; not covered by the BC promise
+     *
      * The negated predicate.
      */
     public function inner(): Predicate

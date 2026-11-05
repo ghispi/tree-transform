@@ -31,6 +31,15 @@ final class DepthListSourceTest extends TestCase
         self::assertSame('a[b[c]], d', Trees::compactOf($source));
     }
 
+    public function testFlatListEntriesRoundTrip(): void
+    {
+        $source = DepthListSource::pairs([['depth' => 0, 'node' => self::n('a')], ['node' => self::n('b'), 'depth' => 1], [0, self::n('c')]]);
+        self::assertSame('a[b], c', Trees::compactOf($source));
+
+        $list = Tree::from($source)->toFlatList();
+        self::assertSame($list, Tree::fromFlatList($list)->toFlatList());
+    }
+
     public function testKeyedGeneratorWithRepeatedKeys(): void
     {
         $entries = (static function (): \Generator {
@@ -66,6 +75,8 @@ final class DepthListSourceTest extends TestCase
             'scalar entry' => [['x'], 'entries must be [depth, node] pairs'],
             'only a depth' => [[[0]], 'entries must be [depth, node] pairs'],
             'only a node' => [[[1 => self::n('a')]], 'entries must be [depth, node] pairs'],
+            'flat entry without node' => [[['depth' => 0]], 'entries must be [depth, node] pairs'],
+            'flat entry with string depth' => [[['depth' => '0', 'node' => self::n('a')]], "depth '0' cannot follow"],
         ];
     }
 

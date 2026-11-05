@@ -10,6 +10,7 @@ use Ghispi\TreeTransform\Cursor\Cursor;
 use Ghispi\TreeTransform\Exception\InvalidArgumentException;
 use Ghispi\TreeTransform\Internal\Stream;
 use Ghispi\TreeTransform\Internal\StreamSink;
+use Ghispi\TreeTransform\Source\AdjacencyListFields;
 
 /**
  * Builds a flat list in pre-order with each node's parent id set to its parent in the output — which differs from
@@ -26,18 +27,21 @@ final readonly class AdjacencyListSink implements Sink, StreamSink
     /** @var \Closure(mixed): mixed */
     private \Closure $readId;
 
+    private string $parentField;
+
     /**
-     * @param mixed                                                   $rootParent parent value written for roots
-     * @param \Closure|null     $nodeFactory
+     * @param AdjacencyListFields $fields      the id field is read (through $accessor), the parent field written
+     * @param mixed               $rootParent  parent value written for roots
+     * @param \Closure|null       $nodeFactory
      */
     public function __construct(
-        string $idField = 'id',
-        private string $parentField = 'parent_id',
+        AdjacencyListFields $fields = new AdjacencyListFields(),
+        Accessor $accessor = new AutoAccessor(),
         private mixed $rootParent = null,
         private ?\Closure $nodeFactory = null,
-        Accessor $accessor = new AutoAccessor(),
     ) {
-        $this->readId = $accessor->reader($idField);
+        $this->readId = $accessor->reader($fields->id);
+        $this->parentField = $fields->parent;
     }
 
     /**

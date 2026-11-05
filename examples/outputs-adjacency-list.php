@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Ghispi\TreeTransform\Source\AdjacencyListFields;
 use Ghispi\TreeTransform\Strategy\Promote;
 use Ghispi\TreeTransform\Tree;
 
@@ -13,7 +14,7 @@ $rows = require __DIR__ . '/support/shop.php';
 $list = Tree::fromNestedSet($rows)
     ->filter(fn(array $c) => $c['products'] > 0, new Promote())
     ->map(fn(array $c) => ['id' => $c['id'], 'title' => $c['title']])
-    ->toAdjacencyList(idField: 'id', parentField: 'parent_id', rootParent: 0);
+    ->toAdjacencyList(new AdjacencyListFields('id', 'parent_id'), rootParent: 0);
 
 foreach ($list as $row) {
     printf("%-3d %-8s parent_id: %d\n", $row['id'], $row['title'], $row['parent_id']);

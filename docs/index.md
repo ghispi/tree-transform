@@ -22,6 +22,7 @@ The library is pre-1.0 (`0.x`). The API can still change between minor versions;
 | [Recipes](recipes.md) | Menus, breadcrumbs, search, select boxes, empty categories, re-rooting, highlighting |
 | [Extending](extending.md) | Your own Source, FilterStrategy, Stage, Sink, Predicate, Accessor |
 | [Performance](performance.md) | Memory and speed model, benchmark results, tips |
+| [Public API](api.md) | Every public type and what you do with it; what is not covered by SemVer |
 
 ## Concepts
 

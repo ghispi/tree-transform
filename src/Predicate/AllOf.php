@@ -21,6 +21,8 @@ final readonly class AllOf implements Predicate
     }
 
     /**
+     * @internal used to compile predicates; not covered by the BC promise
+     *
      * The inner predicates.
      *
      * @return list<Predicate>

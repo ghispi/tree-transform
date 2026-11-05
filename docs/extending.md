@@ -172,7 +172,7 @@ This one works like `Prune` but keeps at most `$max` nodes per root tree, "a pre
 <!-- example: extending-strategy -->
 ```php
 use Ghispi\TreeTransform\Cursor\Cursor;
-use Ghispi\TreeTransform\Predicate\Ancestors;
+use Ghispi\TreeTransform\Predicate\AncestorTracker;
 use Ghispi\TreeTransform\Predicate\Predicate;
 use Ghispi\TreeTransform\Strategy\FilterStrategy;
 use Ghispi\TreeTransform\Tree;
@@ -198,7 +198,7 @@ final readonly class FirstPerRoot implements FilterStrategy
 
 final class FirstPerRootCursor implements Cursor
 {
-    private readonly Ancestors $ancestors;
+    private readonly AncestorTracker $ancestors;
 
     private int $kept = 0;
 
@@ -207,7 +207,7 @@ final class FirstPerRootCursor implements Cursor
         private readonly Predicate $predicate,
         private readonly int $max,
     ) {
-        $this->ancestors = new Ancestors();
+        $this->ancestors = new AncestorTracker();
     }
 
     public function next(): bool
@@ -223,7 +223,7 @@ final class FirstPerRootCursor implements Cursor
             }
             $node = $this->input->node();
             $this->ancestors->enter($node, $depth); // keep the Ancestors view up to date for the predicate
-            if (!$this->predicate->matches($node, $depth, $this->ancestors)) {
+            if (!$this->predicate->matches($node, $depth, $this->ancestors->ancestors())) {
                 $this->input->skipSubtree();
                 continue;
             }
@@ -275,8 +275,8 @@ What a strategy must do:
 
 - Call the predicate **at most once per node**, and not at all for nodes inside a subtree it removes. Call
   `skipSubtree()` on the input as soon as the outcome of a whole subtree is known, so the source can skip it.
-- Pass a correct `Ancestors` view. Create one `Ancestors` per cursor and call `$ancestors->enter($node, $depth)`
-  right before each `matches()` call.
+- Pass a correct `Ancestors` view. Create one `AncestorTracker` per cursor, call `$tracker->enter($node, $depth)`
+  right before each `matches()` call and pass `$tracker->ancestors()`.
 - Keep the output a valid pre-order stream with correct depths. If you remove nodes and keep their descendants,
   recompute the depths, as `Promote` does.
 - Write down the memory bound in the docblock. Buffer only what you must.

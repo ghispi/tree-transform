@@ -87,19 +87,46 @@ This is the [`ActiveTrail`](strategies.md) strategy: all roots, the ancestors of
 siblings, the active node and its children. For nested sets, `GedmoTree` loads only those rows, so a menu for a
 category deep in a 100,000-node tree reads a few dozen rows, not the whole table.
 
+There is exactly one active node, so the strategy always runs with `multiple: false`; for several active nodes,
+use `$gedmo->tree(...)->activeTrail(...)` with your own predicate.
+
 | Option | Default | Effect |
 |---|---|---|
 | `siblings` | `true` | `false` gives a breadcrumb: only the active node and its ancestors. |
 | `activeChildrenDepth` | `1` | Levels shown below the active node (`0` none). |
 | `hydration` | `Hydration::Arrays` | As above. |
+| `modify` | `null` | As in `tree()`: `fn (QueryBuilder $qb, string $alias)` adding your own conditions or joins. |
 
 For closure and materialized path trees the whole tree is read and filtered while streaming.
+
+With `modify` the menu is exactly `tree(..., modify: ...)` followed by `ActiveTrail`: rows removed in SQL move
+their children up (nested set, materialized path) or drop them (closure), as described
+[above](#filtering-in-sql-with-modify). A removed ancestor's children therefore become siblings on the trail, and
+a removed root's children become roots. Because such promoted rows can come from anywhere, the nested set pushdown
+is not used with `modify`: the whole (modified) tree is read and filtered while streaming. If `modify` removes the
+active node itself, no node is active: the menu shows only the roots (nothing with `siblings: false`).
+
+```php
+$menu = $gedmo->activeTrail(
+    Category::class,
+    $currentCategoryId,
+    modify: fn (QueryBuilder $qb, string $alias) => $qb->andWhere("$alias.deletedAt IS NULL"),
+)->toNestedArray();
+```
+
+## Configuration: `config()`
+
+`$gedmo->config(Category::class)` returns the `TreeConfig` read from Gedmo and Doctrine: `strategy` (a
+`TreeStrategy` enum — `Nested`, `Closure`, `MaterializedPath`, whose values are Gedmo's names `nested`, `closure`,
+`materializedPath`), and the field names `id`, `parent`, `left`, `right`, `root`, `level`, `path`, plus
+`pathSeparator`, `pathEndsWithSeparator` and `closureClass`. Read its properties only; it is created by
+`GedmoTree`, and new properties may be added in minor releases.
 
 ## What happens per Gedmo strategy
 
 | Gedmo type | Query order | Source used | Subtree | Max depth | Active trail |
 |---|---|---|---|---|---|
-| `nested` | `root, lft` | `NestedSetSource` (streams) | `lft`/`rgt` range | level column | only the needed rows |
+| `nested` | `root, lft` | `NestedSetSource` (streams) | `lft`/`rgt` range | level column | only the needed rows (whole tree with `modify`) |
 | `materializedPath` | `path` | `MaterializedPathSource` (streams) | `path LIKE 'prefix%'` | level column | whole tree, streamed |
 | `closure` | `id` | `AdjacencyListSource` (reads all rows) | join on the closure table | closure `depth` | whole tree |
 

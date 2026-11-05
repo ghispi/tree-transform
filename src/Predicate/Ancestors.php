@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Predicate;
 
+use Ghispi\TreeTransform\Exception\OutOfRangeException;
+
 /**
  * Lazy, read-only view of the ancestors of the node a predicate is currently testing, root first.
  *
  * The view is reused for every node and is only valid during the predicate call; use toArray() to keep a copy.
  * Ancestors are those of the filter's input, i.e. the tree after any earlier stages.
+ *
+ * Strategy authors keep it up to date with an {@see AncestorTracker}; tests build one with {@see Ancestors::of()}.
  *
  * @implements \IteratorAggregate<int, mixed>
  */
@@ -18,6 +22,23 @@ final class Ancestors implements \Countable, \IteratorAggregate
     private array $path = [];
 
     private int $count = 0;
+
+    private function __construct() {}
+
+    /**
+     * A view of the given ancestors, root first — for testing predicates outside a pipeline.
+     *
+     * @param iterable<mixed> $path
+     */
+    public static function of(iterable $path = []): self
+    {
+        $view = new self();
+        foreach ($path as $node) {
+            $view->path[$view->count++] = $node;
+        }
+
+        return $view;
+    }
 
     /**
      * Number of ancestors; equals the depth of the current node.
@@ -38,12 +59,12 @@ final class Ancestors implements \Countable, \IteratorAggregate
     /**
      * The ancestor at the given depth (0 = root).
      *
-     * @throws \OutOfRangeException when $depth is not between 0 and count() - 1
+     * @throws OutOfRangeException when $depth is not between 0 and count() - 1
      */
     public function at(int $depth): mixed
     {
         if ($depth < 0 || $depth >= $this->count) {
-            throw new \OutOfRangeException(\sprintf('No ancestor at depth %d (node has %d).', $depth, $this->count));
+            throw new OutOfRangeException(\sprintf('No ancestor at depth %d (node has %d).', $depth, $this->count));
         }
 
         return $this->path[$depth];
@@ -111,8 +132,7 @@ final class Ancestors implements \Countable, \IteratorAggregate
     /**
      * Records the node about to be tested; its ancestors are the nodes recorded at lower depths.
      *
-     * For strategy authors: call it with every node, right before the predicate, in pre-order. Predicates
-     * never call it.
+     * @internal strategy authors use {@see AncestorTracker::enter()}
      */
     public function enter(mixed $node, int $depth): void
     {

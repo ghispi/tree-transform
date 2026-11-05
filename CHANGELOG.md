@@ -5,6 +5,55 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+API review before 1.0 (roadmap phase 1.0, step 1). All public types are listed in [docs/api.md](docs/api.md).
+
+### Changed
+
+- **Breaking:** the parameter for the children field is `childrenField` everywhere: `NestedArraySource` (was
+  `children`), `NestedArraySink` and `Tree::toNestedArray()` (were `childrenKey`). Positional calls are unaffected.
+- **Breaking:** `AdjacencyListSink` and `Tree::toAdjacencyList()` take an `AdjacencyListFields` object, as the
+  adjacency sources do: `toAdjacencyList(new AdjacencyListFields('key', 'up'), rootParent: 0)` instead of
+  `toAdjacencyList('key', 'up', 0)`. The parameter order is now `fields, accessor, rootParent, nodeFactory`.
+- **Breaking:** `NestedSetSink` and `Tree::toNestedSet()` take a `NestedSetFields` object, as `NestedSetSource`
+  does, and drop `restartPerRoot`. `NestedSetFields` has a new `level` field (sources ignore it). The sink's
+  default is `new NestedSetFields(level: 'lvl')`, so the default output is unchanged. Migration:
+  `leftField`/`rightField`/`levelField` → `new NestedSetFields(left: …, right: …, level: …)`, and
+  `restartPerRoot: true` → set a `root` field and keep `level: 'lvl'` if you wrote levels (or use
+  `NestedSetFields::gedmo()`); `levelField: null` → leave `level` out.
+- With a `root` field, `NestedSetSink` numbers every root's tree from 1 **and writes each node's root id** (read from
+  `idField`, default `'id'` — set it when your id column has another name). Before, the root column kept its input
+  value, which was wrong after `Promote` or `depthWindow()`. A root without an int or string id, or two consecutive
+  roots with the same id, throw `InvalidArgumentException`. A `nodeFactory` receives the root id as a fifth argument. `NestedSetFields::gedmo()` now also
+  sets `level: 'lvl'`.
+- **Breaking:** `Ancestors` is read-only for user code: its constructor is private and `enter()` is `@internal`.
+  Custom strategies use the new `AncestorTracker` (`enter()`, `ancestors()`). `Ancestors::of($path)` builds a view
+  for testing predicates.
+- **Breaking:** `Ancestors::at()` throws `Exception\OutOfRangeException` (a subclass of `\OutOfRangeException` that
+  implements `TreeTransformException`), so `catch (TreeTransformException)` catches it.
+- **Breaking:** `Tree::activeTrail()`'s first parameter is named `predicate` (was `isActive`), as in `filter()` and
+  `annotate()`.
+- `FieldEquals` and `FieldIn` default `accessor` to `new AutoAccessor()` instead of `null`. Passing `null` no longer
+  works.
+- `Tree::depthWindow()` defaults `min` to 0, like `DepthWindow`.
+- `AllOf::predicates()`, `AnyOf::predicates()`, `Callback::closure()`, `Not::inner()`,
+  `CycleDetectedException::forIds()` and `OrphanNodeException::forParent()` are `@internal`.
+- **Breaking (Gedmo bridge):** `TreeConfig::$strategy` is a `Bridge\Gedmo\TreeStrategy` enum (`Nested`,
+  `Closure`, `MaterializedPath`; values are Gedmo's strategy names). The `TreeConfig::NESTED`, `CLOSURE` and
+  `MATERIALIZED_PATH` constants are removed: compare with `TreeStrategy::Nested`, or use
+  `$config->strategy->value`.
+- The `TreeConfig` constructor and `TreeConfig::read()` are `@internal`: get the configuration from
+  `GedmoTree::config()` and only read it. New properties may be added in minor releases.
+
+### Added
+
+- `Tree::fromFlatList()`, and `DepthListSource::pairs()` accepts `['depth' => …, 'node' => …]` entries: the output of
+  `toFlatList()` can be read back.
+- `InvalidTreeException::nodeId()`, `CycleDetectedException::ids()`, `OrphanNodeException::parentId()` and
+  `childCount()`.
+- `GedmoTree::activeTrail()` accepts `modify` (last parameter), with the same meaning as in `tree()`. With `modify`
+  set, the result equals `tree(modify: …)` followed by `ActiveTrail`, and the nested set row pushdown is not used.
+- `docs/api.md`: the public API at a glance.
+
 ## [0.2.0] - 2026-10-28
 
 ### Changed

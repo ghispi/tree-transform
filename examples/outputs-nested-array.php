@@ -19,8 +19,8 @@ echo json_encode($tree->toNestedArray()), "\n\n";
 echo "omitEmptyChildren: true\n";
 echo json_encode($tree->toNestedArray(omitEmptyChildren: true)), "\n\n";
 
-echo "childrenKey: '__children' (same shape as Gedmo buildTree())\n";
-echo json_encode($tree->toNestedArray(childrenKey: '__children')), "\n\n";
+echo "childrenField: '__children' (same shape as Gedmo buildTree())\n";
+echo json_encode($tree->toNestedArray(childrenField: '__children')), "\n\n";
 
 echo "nodeFactory: build any shape\n";
 echo json_encode($tree->toNestedArray(nodeFactory: fn(array $node, array $children, int $depth) => [
