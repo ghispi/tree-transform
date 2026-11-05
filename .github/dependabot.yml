@@ -16,3 +16,11 @@ updates:
     directory: /docker/php
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directory: /docker/docs
+    schedule:
+      interval: monthly
+  - package-ecosystem: pip
+    directory: /docker/docs
+    schedule:
+      interval: monthly

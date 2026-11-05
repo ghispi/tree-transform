@@ -482,8 +482,16 @@ shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do no
   checker (CI job `bc`, `make bc-check`; report-only while the latest tag predates 0.3.0).
 - **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
   repositories; superseded runs are cancelled); mutation testing weekly and on demand (`mutation.yml`, ~30 min); benchmarks on demand (`benchmarks.yml`);
-  Dependabot; `CHANGELOG.md`
+  documentation site on GitHub Pages (`docs.yml`, below); Dependabot; `CHANGELOG.md`
   (Keep a Changelog), `CONTRIBUTING.md`, `SECURITY.md`, issue/PR templates; release to Packagist.
+- **Docs site**: https://ghispi.github.io/tree-transform/, built from `docs/*.md` with
+  [Zensical](https://zensical.org) (`zensical.toml`, image `docker/docs`, version pinned in
+  `docker/docs/requirements.txt`). Chosen in 2026-11 for maintenance status: Material for MkDocs is in maintenance
+  mode, MkDocs 1.x no longer takes outside contributions, and Zensical is its MkDocs-compatible successor from the
+  same team. The pages stay plain GitHub Markdown; `bin/docs-site` copies them to `var/docs-site/docs` and rewrites
+  links out of `docs/` (`../examples/…`) to GitHub URLs at the release tag. `make docs-site` builds it in strict mode
+  (broken links fail). `docs.yml` deploys on release tags and by hand, and only builds on `main` and pull requests,
+  so the site shows the latest release.
 
 ```
 src/
@@ -495,6 +503,8 @@ tests/
   Unit/  Differential/  Integration/  Fixtures/
 benchmarks/
 docs/
+docker/php/  docker/docs/
+zensical.toml
 ```
 
 ## 13. Roadmap
@@ -525,7 +535,7 @@ No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
 | 3 | **Spec matches CI** (done).  §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
 | 4 | **Mutation survivors** (done). Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
 | 5 | **Benchmark report** (done). Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
-| 6 | **Docs site.** Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
+| 6 | **Docs site** (done; live once Pages is enabled and `docs.yml` runs). Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
 | 7 | **Upgrade guide and release.** `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
 
 Order: 1 → 2 (the policy needs the audited surface), 3 and 4 in parallel with them, 0.3.0, then 5 and 6 in parallel,

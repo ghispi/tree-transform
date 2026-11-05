@@ -12,9 +12,10 @@
         "gedmo",
         "filter"
     ],
-    "homepage": "https://github.com/ghispi/tree-transform",
+    "homepage": "https://ghispi.github.io/tree-transform/",
     "support": {
         "issues": "https://github.com/ghispi/tree-transform/issues",
+        "docs": "https://ghispi.github.io/tree-transform/",
         "source": "https://github.com/ghispi/tree-transform"
     },
     "authors": [

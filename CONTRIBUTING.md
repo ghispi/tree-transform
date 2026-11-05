@@ -22,6 +22,7 @@ Use another PHP version with `PHP_VERSION=8.5 make build install ci`.
   (integration tests on MySQL and PostgreSQL in Docker; `make db-down` stops them).
 - Behaviour changes need documentation in the same pull request: the relevant page in `docs/`, and a runnable
   example in `examples/` with its expected output in a `.out` file (checked by the `docs` test suite).
+  `make docs-site` builds the documentation site into `var/docs-site/site` and fails on broken links.
 - Add a line to `CHANGELOG.md` under `[Unreleased]`.
 - Public API changes follow the [compatibility promise](docs/api.md#compatibility-promise). If `make ci` fails in
   the `api` suite, the public API changed. If that was intended, run `make api-snapshot`, commit the diff of

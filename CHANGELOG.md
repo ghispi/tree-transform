@@ -10,6 +10,8 @@ All notable changes to this project are documented here. The format follows
 - [Benchmark report](docs/benchmarks.md): the full matrix on PHP 8.4 and 8.5, JIT off and on, with hardware, method,
   the SPEC §10 targets with a verdict each, and `make bench-report` to reproduce it
   (`benchmarks/run-report.sh`, `benchmarks/render-report.php`).
+- Documentation site at https://ghispi.github.io/tree-transform/, built from `docs/` with Zensical (`make docs-site`)
+  and deployed by `docs.yml` on release tags. `composer.json` `homepage` and `support.docs` point to it.
 
 ## [0.3.0] - 2026-11-05
 

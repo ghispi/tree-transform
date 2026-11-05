@@ -1,0 +1,78 @@
+# Documentation site (make docs-site): Zensical, the MkDocs-compatible successor of Material for MkDocs.
+# The pages are docs/*.md, copied by bin/docs-site into var/docs-site/docs with links out of docs/ rewritten.
+[project]
+site_name = "tree-transform"
+site_description = "Streaming filter and transform of trees in PHP: nested sets, adjacency lists, materialized paths, nested arrays, Doctrine/Gedmo."
+site_url = "https://ghispi.github.io/tree-transform/"
+repo_url = "https://github.com/ghispi/tree-transform"
+repo_name = "ghispi/tree-transform"
+edit_uri = "edit/main/docs/"
+docs_dir = "var/docs-site/docs"
+site_dir = "var/docs-site/site"
+copyright = "MIT License"
+nav = [
+  { "Overview" = "index.md" },
+  { "Getting started" = "getting-started.md" },
+  { "Guide" = [
+    { "Sources" = "sources.md" },
+    { "Strategies" = "strategies.md" },
+    { "Predicates" = "predicates.md" },
+    { "Stages" = "stages.md" },
+    { "Outputs" = "outputs.md" },
+    { "Doctrine and Gedmo" = "gedmo.md" },
+    { "Recipes" = "recipes.md" },
+  ] },
+  { "Reference" = [
+    { "Public API" = "api.md" },
+    { "Extending" = "extending.md" },
+    { "Performance" = "performance.md" },
+    { "Benchmarks" = "benchmarks.md" },
+    { "Specification" = "SPEC.md" },
+    { "Changelog" = "https://github.com/ghispi/tree-transform/blob/main/CHANGELOG.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.action.edit",
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.superfences = {}

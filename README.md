@@ -103,6 +103,8 @@ Source: [`examples/getting-started-quickstart.php`](examples/getting-started-qui
 
 ## Documentation
 
+Read it as a site at **https://ghispi.github.io/tree-transform/** (docs of the latest release), or here:
+
 - [Overview and concepts](docs/index.md) — and how to choose a strategy
 - [Getting started](docs/getting-started.md)
 - [Sources](docs/sources.md) · [Strategies](docs/strategies.md) · [Predicates](docs/predicates.md) ·

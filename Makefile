@@ -2,7 +2,7 @@ PHP_VERSION ?= 8.4
 DC = PHP_VERSION=$(PHP_VERSION) HOST_UID=$(shell id -u) HOST_GID=$(shell id -g) docker compose
 RUN = $(DC) run --rm php
 
-.PHONY: help build install update shell test coverage stan cs cs-fix infection bench bench-report docs test-db db-down api-snapshot bc-check ci
+.PHONY: help build install update shell test coverage stan cs cs-fix infection bench bench-report docs docs-site test-db db-down api-snapshot bc-check ci
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -21,6 +21,11 @@ shell: ## Shell in the PHP container
 
 test: ## Run PHPUnit
 	$(RUN) vendor/bin/phpunit
+
+docs-site: ## Build the documentation site into var/docs-site/site (DOCS_REF: git ref for links out of docs/, default main)
+	$(RUN) env DOCS_REF=$(or $(DOCS_REF),main) php bin/docs-site
+	$(DC) --profile docs build -q docs
+	$(DC) --profile docs run --rm docs zensical build --clean --strict
 
 test-db: ## Integration tests on MySQL and PostgreSQL (starts both in Docker)
 	$(DC) --profile db up -d --wait mysql postgres

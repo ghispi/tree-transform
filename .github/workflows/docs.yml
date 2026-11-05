@@ -1,0 +1,53 @@
+name: Docs
+
+# The site at https://ghispi.github.io/tree-transform/ shows the docs of the latest release: a release tag builds and
+# deploys it. Pushes to main and pull requests that touch the docs only build it (strict mode: broken links fail).
+# "Run workflow" deploys the chosen branch or tag by hand. Pages must be set to deploy from GitHub Actions.
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+    paths: ['docs/**', 'zensical.toml', 'docker/docs/**', 'bin/docs-site', 'tests/Docs/Support/DocsSite.php', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docs/**', 'zensical.toml', 'docker/docs/**', 'bin/docs-site', 'tests/Docs/Support/DocsSite.php', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build images
+        run: make build
+      - name: Install dependencies
+        run: make install
+      - name: Build site
+        run: make docs-site DOCS_REF=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: var/docs-site/site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v5
+        id: deployment

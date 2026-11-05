@@ -12,6 +12,19 @@ services:
       - composer-cache:/home/app/.composer/cache
     working_dir: /app
 
+  # Documentation site builder (make docs-site); not started by other targets.
+  docs:
+    build:
+      context: docker/docs
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: tree-transform-docs
+    profiles: [docs]
+    volumes:
+      - .:/app
+    working_dir: /app
+
   # Databases for the integration tests (make test-db); not started by other targets.
   mysql:
     image: mysql:8.4
