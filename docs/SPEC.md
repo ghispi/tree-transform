@@ -398,7 +398,8 @@ The facade is sugar only; every piece is usable standalone.
 
 **Packaging (decided):** the bridge ships in this package for v0.x. Doctrine and Gedmo are `suggest` + dev
 dependencies only; bridge classes are inert unless used, and `conflict` rules exclude unsupported major versions.
-Before 1.0 it is split into `ghispi/tree-transform-gedmo` if it grows its own release cadence or dependencies.
+It stays in this package for 1.0 (§14 decision 3); a split into `ghispi/tree-transform-gedmo` happens only if it
+needs runtime dependencies of its own.
 
 ## 10. Performance
 
@@ -477,11 +478,30 @@ docs/
 | **0.2** | `NestedSetSink`, `Annotate`, `Map` / `MaxDepth` / `Limit` / `DepthWindow`, Gedmo bridge (incl. `ActiveTrail` pushdown) + integration tests. |
 | **0.3** | `Placeholder`, `MinMatches`, `SortSiblings`. |
 | **0.4** | Generator-based internal pipeline behind the `Cursor` contract, faster adjacency index (two passes, inline reads, cycle check only when a child precedes its parent). |
-| **1.0** | API freeze, docs site, benchmark report published. |
+| **1.0** | API freeze, docs site, benchmark report published (plan: §13.1). |
 
 Phases are not release numbers: phases 0.1–0.3 shipped in release 0.1.0, phase 0.4 in release 0.2.0.
 
 Every phase ships its documentation (§15) — a feature is not done until it is documented with a tested example.
+
+### 13.1 Phase 1.0 plan
+
+Two releases: **0.3.0** carries every breaking change the API audit produces (allowed in `0.x`), **1.0.0** follows
+once the docs site and the benchmark report are out, with no API changes after 0.3.0 except fixes from the audit.
+No release candidate: the 0.3.0 → 1.0.0 gap plays that role.
+
+| # | Step | Done when | Release |
+|---|---|---|---|
+| 1 | **API audit.** List every public symbol (classes, methods, constructor parameters — named arguments make parameter names part of the API — enum cases, exception classes). Check naming consistency across `Tree`, sources, strategies, stages, sinks and the bridge; that `final`/`readonly` is applied; that every `Internal\*` type and `@internal` method stays out of public signatures. Independent review by `tree-semantics-reviewer`. | `docs/api.md` lists the public API; renames/removals done, each in `CHANGELOG.md` with the migration | 0.3.0 |
+| 2 | **BC policy.** Write down what SemVer covers: public non-`@internal` symbols, constructor and method parameter names, output shapes and node order, exception classes thrown. Not covered: `Internal\*`, `@internal` methods, benchmark numbers, exception messages. Extension interfaces (`Source`, `FilterStrategy`, `Stage`, `Sink`, `Predicate`, `Accessor`, `Cursor`) only gain methods in a major. Add `roave/backward-compatibility-check` to CI against the latest tag. | Policy in `docs/api.md` and `CONTRIBUTING.md`; BC job green on `main` | 0.3.0 |
+| 3 | **Spec matches CI.** §10 claims PR benchmark comparisons, §11 MySQL/PostgreSQL integration tests, §11 Rector; none exist. Add MySQL and PostgreSQL service containers to the integration job (pushdown SQL — `LIKE`, `BETWEEN`, ordering of `NULL` roots — is where databases differ). Replace the benchmark claim with a manual `workflow_dispatch` job that uploads the report (hosted runners are too noisy to gate on 10%). Drop Rector. | CI runs all three databases; §10–§12 describe what CI does | 0.3.0 |
+| 4 | **Mutation survivors.** Re-check the ~110 survivors believed equivalent; kill the ones that are not, and record the remaining classes of equivalent mutants in §11. | MSI unchanged or higher; survivor notes in §11 | 0.3.0 |
+| 5 | **Benchmark report.** Full matrix (§10 shapes × sizes, sources × strategies × sinks, naive baseline) on PHP 8.4 and 8.5, JIT off and on, on a quiet machine; publish `docs/benchmarks.md` with hardware, versions, method, the command to reproduce, and the §10 targets met/not met. `docs/performance.md` links to it instead of carrying its own numbers. | Report published, numbers in `performance.md` and README taken from it | 1.0.0 |
+| 6 | **Docs site.** Static site generated from `docs/*.md` (the pages stay readable on GitHub), built in Docker, deployed to GitHub Pages by a workflow on tags and `main`. Generator: an MkDocs-compatible one, chosen for maintenance status at the time of the step. `make docs-site` builds it locally; `tests/Docs` keeps checking the examples. Needs the user to enable Pages for the repository. | Site live; README and `composer.json` `homepage`/`support.docs` point to it | 1.0.0 |
+| 7 | **Upgrade guide and release.** `UPGRADE.md` covering 0.1/0.2 → 1.0; remove the pre-1.0 notices from README and `docs/index.md`; §12 "`0.x` until the API is frozen" becomes the BC policy; release via the `release` skill. | 1.0.0 tagged, on Packagist, smoke-tested | 1.0.0 |
+
+Order: 1 → 2 (the policy needs the audited surface), 3 and 4 in parallel with them, 0.3.0, then 5 and 6 in parallel,
+then 7.
 
 ## 14. Decisions
 
@@ -489,7 +509,7 @@ Every phase ships its documentation (§15) — a feature is not done until it is
 |---|---|---|
 | 1 | Namespace | `Ghispi\TreeTransform\`, package `ghispi/tree-transform` |
 | 2 | PHP minimum | 8.4 |
-| 3 | Gedmo bridge packaging | Same package for v0.x, split before 1.0 if it grows (§9) |
+| 3 | Gedmo bridge packaging | Same package for v0.x and 1.0 (§9). Reviewed for 1.0: the bridge is ~540 lines, has no release cadence of its own and only `suggest` dependencies, so a split would add a second package to version and document for no gain. Supporting a new Doctrine/Gedmo major is a minor release; dropping one is allowed in a minor once upstream stops supporting it. Split later only if it needs runtime dependencies. |
 | 4 | Ancestor access in predicates | Yes, v0.1, lazy `Ancestors` view (§5.3) |
 | 5 | Output shape for object payloads | Arrays get keys set, objects wrapped in `TreeNode`, node factory for anything else (§7) |
 | 6 | `ActiveTrail` in v0.1 | Yes (§5.1.1) |
