@@ -23,7 +23,8 @@ description: Checklist for adding or changing a tree Source (input representatio
 4. **Fixtures.** Teach `tests/Fixtures/GeneratedTree` to render the representation, so the differential suite
    compares it with every other source.
 5. **Tests.** Unit (ordering, forests, malformed input, skip behaviour, generator reuse, string ids) plus the
-   differential matrix (`tests/Fixtures/Matrix`).
+   differential matrix (`tests/Fixtures/Matrix`). Add the source and each kind of bad input it rejects to
+   `tests/Api/Behaviour.php` (inputs written out there) and run `make api-snapshot`.
 6. **Gedmo.** If it maps to a Gedmo strategy, follow the `gedmo-bridge` skill.
 7. **Finish.** `run-checks`; a benchmark subject in `benchmarks/SourceBench.php`; a `tree-semantics-reviewer`
    pass; docs and a tested example via `write-docs` (incl. `CHANGELOG.md`).

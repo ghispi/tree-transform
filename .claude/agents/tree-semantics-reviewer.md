@@ -33,6 +33,10 @@ tests miss. Check:
    strategy, nested-set ActiveTrail subset query, LIKE escaping in paths, paths with and without leading/trailing
    separators, root as association vs plain column, entities without a level column, `modify` interactions.
 8. **Hot path hygiene and spec drift** — no recursion, no per-node `new`/closures; behaviour vs SPEC.md.
+9. **Compatibility** (after 1.0) — any diff to `tests/Api/behaviour.txt` or `public-api.txt` in the change: is each
+   changed line a bug fix the docs back (then listed in `tests/Api/behaviour-changes.txt` and the changelog) or a
+   break? Is new public behaviour covered by new cases in `tests/Api/Behaviour.php`? Run `make behaviour-check` on
+   the host if a release snapshot exists.
 
 Keep test runs targeted (`docker compose run --rm php vendor/bin/phpunit --filter X`); do not run phpbench or
 Infection unless asked.

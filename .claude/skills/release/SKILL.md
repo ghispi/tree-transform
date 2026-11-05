@@ -14,6 +14,8 @@ description: Cut a release of ghispi/tree-transform — version choice (SemVer u
      lowest-dependency job locally, use a scratch clone (never the working tree, its `vendor/` is shared):
      `git clone . <scratch> && docker run --rm -u $(id -u):$(id -g) -e COMPOSER_HOME=/tmp/c -v <scratch>:/app -w /app tree-transform-php:8.4 sh -c 'composer update --prefer-lowest --prefer-stable -q && vendor/bin/phpstan analyse && vendor/bin/phpunit'`.
    - `make infection` (MSI ≥ 90%, alone on the machine).
+   - `make bc-check` and `make behaviour-check` against the previous tag: clean for a patch or minor, except cases
+     listed in `tests/Api/behaviour-changes.txt` as bug fixes the changelog explains.
 3. **Changelog.** Rename `[Unreleased]` to `[x.y.z] - YYYY-MM-DD`, add an empty `[Unreleased]` above it, and update
    the links at the bottom (`[Unreleased]: …/compare/vx.y.z...HEAD`, `[x.y.z]: …/compare/vA...vx.y.z`, or
    `…/releases/tag/vx.y.z` for the first release).

@@ -2,7 +2,7 @@ PHP_VERSION ?= 8.4
 DC = PHP_VERSION=$(PHP_VERSION) HOST_UID=$(shell id -u) HOST_GID=$(shell id -g) docker compose
 RUN = $(DC) run --rm php
 
-.PHONY: help build install update shell test coverage stan cs cs-fix infection bench bench-report docs docs-site test-db db-down api-snapshot bc-check ci
+.PHONY: help build install update shell test coverage stan cs cs-fix infection bench bench-report docs docs-site test-db db-down api-snapshot bc-check behaviour-check ci
 
 help: ## Show targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -63,12 +63,19 @@ bench-report: ## Full benchmark matrix on PHP 8.4 and 8.5, JIT off and on (~35 m
 docs: ## Regenerate example outputs and the example blocks in the docs
 	$(RUN) php bin/docs-sync --outputs
 
-api-snapshot: ## Record the public API in tests/Api/public-api.txt (review the diff)
+api-snapshot: ## Record the public API and behaviour in tests/Api/*.txt (review the diff)
 	$(DC) run --rm -e UPDATE_API_SNAPSHOT=1 php vendor/bin/phpunit --testsuite api
 
 BC_FROM ?= $(shell git describe --tags --abbrev=0)
 bc-check: ## Backward compatibility check against the latest tag (BC_FROM=vX.Y.Z for another)
 	$(RUN) composer install -d tools/bc-check --no-interaction --quiet
 	$(RUN) tools/bc-check/vendor/bin/roave-backward-compatibility-check --from=$(BC_FROM) --format=markdown
+
+behaviour-check: ## Behaviour against the latest tag's tests/Api/behaviour.txt (BC_FROM=vX.Y.Z for another)
+	@mkdir -p var
+	@if git cat-file -e $(BC_FROM):tests/Api/behaviour.txt 2>/dev/null; then \
+		git show $(BC_FROM):tests/Api/behaviour.txt > var/behaviour-$(BC_FROM).txt && \
+		$(RUN) php tests/Api/behaviour-check.php var/behaviour-$(BC_FROM).txt $(BC_FROM); \
+	else echo "$(BC_FROM) has no behaviour snapshot (added after it); nothing to compare."; fi
 
 ci: cs stan test ## Everything CI runs (fast part)

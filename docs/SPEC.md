@@ -448,6 +448,14 @@ shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do no
   representations; tests assert that (1) all sources yield identical `(depth, id)` sequences, (2) every strategy
   matches a simple recursive **reference oracle** implementation, (3) round-trips (nested set → strategy →
   `NestedSetSink`) produce valid nested sets.
+- **Behaviour snapshot** (`tests/Api/Behaviour.php` → `behaviour.txt`): the oracle lives in the repository and
+  changes with the code, so a change made to both passes the differential tests. The snapshot pins what the BC
+  policy covers — nodes, depths and order of every source, strategy (all `OnMatch` modes) and stage on the running
+  example, sink output, and the exception class and ids for each kind of bad input; not messages or predicate call
+  order. Its inputs are written out in the file rather than taken from `tests/Fixtures`, so a release's snapshot
+  stays comparable with later code. `make behaviour-check` (CI job `bc`) renders the cases of the latest release's
+  snapshot with the current code; a changed or removed case fails unless `tests/Api/behaviour-changes.txt` lists it
+  for that tag, which is for bug fixes and majors only. New cases are free.
 - **Integration tests**: Doctrine ORM + Gedmo for all three Gedmo strategies on SQLite (every run), and on MySQL 8.4
   and PostgreSQL 17 (`make test-db`, CI job `databases`; the databases run as Compose services, selected with
   `TT_DATABASE_URL`).
@@ -479,8 +487,9 @@ shapes up to 300k nodes, streaming up to 1.1M; the full 1M in-memory sizes do no
   asymmetric visibility (`public private(set)`) and property hooks for value objects, `new` without parentheses.
 - **License**: MIT. SemVer since 1.0: minor and patch releases don't break the public API; a break needs a major
   release and a section in `UPGRADE.md`. Compatibility promise and what it covers:
-  [docs/api.md](api.md#compatibility-promise), guarded by the API snapshot test (`tests/Api`) and the Roave BC
-  checker (CI job `bc`, `make bc-check`; report-only while the latest tag predates 0.3.0).
+  [docs/api.md](api.md#compatibility-promise), guarded by the API and behaviour snapshot tests (`tests/Api`), the Roave BC
+  checker (CI job `bc`, `make bc-check`; report-only while the latest tag predates 0.3.0) and the behaviour check
+  against the latest release's snapshot (same job, `make behaviour-check`; from the first release that has one).
 - **GitHub**: Actions for tests, static analysis and CS on every push (standard hosted runners: free for public
   repositories; superseded runs are cancelled); mutation testing weekly and on demand (`mutation.yml`, ~30 min); benchmarks on demand (`benchmarks.yml`);
   documentation site on GitHub Pages (`docs.yml`, below); Dependabot; `CHANGELOG.md`

@@ -1,0 +1,8 @@
+# Accepted changes to released behaviour, checked by `make behaviour-check` (tests/Api/behaviour-check.php).
+#
+# One line per case whose output may differ from the snapshot of a release:
+#
+#     <release tag> | <case name as in behaviour.txt> | <reason, e.g. "bug fix, see CHANGELOG 1.0.1">
+#
+# Only bug fixes (output that contradicted the docs) and major releases belong here; the CHANGELOG entry explains the
+# change to users. Entries for older tags are ignored and can be removed at any time.
