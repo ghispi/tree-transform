@@ -2,7 +2,9 @@ name: Docs
 
 # The site at https://ghispi.github.io/tree-transform/ shows the docs of the latest release: a release tag builds and
 # deploys it. Pushes to main and pull requests that touch the docs only build it (strict mode: broken links fail).
-# "Run workflow" deploys the chosen branch or tag by hand. Pages must be set to deploy from GitHub Actions.
+# "Run workflow" deploys the chosen branch or tag by hand. Pages must be set to deploy from GitHub Actions, and the
+# github-pages environment must allow tags matching v* (Settings → Environments → github-pages → Deployment branches
+# and tags); by default it only accepts the default branch.
 on:
   push:
     tags: ['v*']
