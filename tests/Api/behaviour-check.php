@@ -16,7 +16,8 @@ use Ghispi\TreeTransform\Tests\Api\Behaviour;
 
 require \dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-[, $snapshotFile, $tag] = $argv + [null, null, null];
+$args = $_SERVER['argv'] ?? [];
+[, $snapshotFile, $tag] = (\is_array($args) ? $args : []) + [null, null, null];
 if (!is_string($snapshotFile) || !is_string($tag) || !is_file($snapshotFile)) {
     fwrite(STDERR, "usage: php tests/Api/behaviour-check.php <release snapshot> <release tag>\n");
     exit(2);
