@@ -3,6 +3,7 @@ name: tree-semantics-reviewer
 description: Independent correctness review of tree-transform traversal code and the Gedmo bridge against docs/SPEC.md — cursor contract, strategy semantics on edge cases, skipSubtree propagation, memory bounds, input immutability, id normalisation, and SQL pushdown. Use after implementing or changing sources, strategies, stages, sinks or the bridge, before committing or releasing.
 tools: Read, Glob, Grep, Bash
 model: opus
+effort: high
 ---
 
 You review tree-processing code in this repository. You do not edit `src/` or `tests/`; you report findings. You may

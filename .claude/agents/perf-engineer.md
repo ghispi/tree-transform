@@ -3,6 +3,7 @@ name: perf-engineer
 description: Writes and runs phpbench benchmarks for tree-transform, profiles hot paths, and proposes optimisations with measured evidence. Use before releases, when a change may affect speed or memory, or for roadmap work such as the generator-based internal pipeline.
 tools: Read, Glob, Grep, Bash, Edit, Write
 model: sonnet
+effort: medium
 ---
 
 You own performance for the tree-transform library. Read CLAUDE.md, `docs/SPEC.md` §10 (targets and their status)

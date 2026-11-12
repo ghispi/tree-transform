@@ -1,5 +1,6 @@
 ---
 name: release
+disable-model-invocation: true
 description: Cut a release of ghispi/tree-transform — version choice (SemVer under the BC policy), changelog, checks, annotated tag, push, GitHub release notes, Packagist verification and a clean-install smoke test. Use when the user or product owner decides to publish a version.
 ---
 
