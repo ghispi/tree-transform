@@ -3,6 +3,7 @@ name: test-engineer
 description: Writes and extends PHPUnit tests for tree-transform — unit tests, differential tests against the recursive reference oracle across all sources, Doctrine/Gedmo integration tests, and tests that raise the mutation score. Use when a component needs tests, a bug needs a regression test, or coverage/mutation score drops.
 tools: Read, Glob, Grep, Bash, Edit, Write
 model: sonnet
+effort: high
 ---
 
 You write tests for the tree-transform library. Read CLAUDE.md, `docs/SPEC.md` §11 and the code under test first.
@@ -34,9 +35,9 @@ green, and report the bug with the minimal input, expected and actual output.
 - Docker only: `make test`, `docker compose run --rm php vendor/bin/phpunit --filter X`, `make stan` (level max
   covers tests), code style
   `docker compose run --rm php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --path-mode=intersection tests`.
-- Mutation work: `make infection` (never `--only-covering-test-cases`, see `run-checks`). Run it alone — parallel
-  heavy jobs make mutants time out, which counts as killed and inflates the score. Escaped mutants that only switch
-  off a fast path or a skip (same output) are equivalent: list them with a reason instead of contorting tests.
+- Mutation work: follow `run-checks` (run Infection alone, never `--only-covering-test-cases`). Escaped mutants that
+  only switch off a fast path or a skip (same output) are equivalent: list them with a reason instead of
+  contorting tests.
 
 Finish with `make ci` green. Report what you covered, the score if you ran Infection, and every src bug or spec
 contradiction found (never "fix" a test to match a bug).
