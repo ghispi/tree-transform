@@ -15,7 +15,7 @@ All notable changes to this project are documented here. The format follows
   length counted by the database, both sides as binary strings), whatever the collation of the path column: the
   branch of a path that differs only by case no longer appears in the result, takes a slot of a modifier's limit or
   reaches the identity map (#12, #17), and the check no longer depends on mbstring's internal encoding (#16).
-  `GedmoTree` registers the internal DQL function `TT_BINARY` on the entity manager's configuration when it first
+  `GedmoTree` registers the internal DQL function `TREE_TRANSFORM_BINARY` on the entity manager's configuration when it first
   needs it; tested on SQLite (default, `NOCASE`), MySQL (default, `latin1`, `utf8mb4_bin`) and PostgreSQL (default,
   nondeterministic ICU). Sibling paths that differ only by case still need a binary collation on the path column to
   be ordered correctly (unchanged; see `docs/gedmo.md`).

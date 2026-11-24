@@ -404,7 +404,7 @@ The facade is sugar only; every piece is usable standalone.
   - Streams via `Query::toIterable()`; recommends `HYDRATE_ARRAY` (much cheaper than entities).
   - Structural pushdown: subtree of a node (`lft BETWEEN` / `path LIKE 'x%'`), max depth (`level <= n`).
   - Subtree path matching is byte-exact in SQL, before a `$modify` limit and before hydration, whatever the collation
-    of the path column, on MySQL/MariaDB, SQLite and PostgreSQL (DQL function `TT_BINARY`: `CAST(CONVERT(x USING
+    of the path column, on MySQL/MariaDB, SQLite and PostgreSQL (DQL function `TREE_TRANSFORM_BINARY`: `CAST(CONVERT(x USING
     utf8mb4) AS BINARY)`, `COLLATE BINARY`, `COLLATE "C"`). `LIKE` stays as the index-friendly prefilter; the length of
     the prefix is counted by the database. On other platforms a PHP prefix filter removes look-alike rows, but a
     limit and the identity map follow the column collation. Ordering of *sibling* paths that differ only by case follows

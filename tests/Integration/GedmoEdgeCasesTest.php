@@ -271,4 +271,15 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
         self::assertSame('Café .wanted', self::outline($tree->iterate()));
     }
+
+    public function testAConflictingDqlFunctionRegistrationIsReported(): void
+    {
+        $this->em->getConfiguration()->addCustomStringFunction('TREE_TRANSFORM_BINARY', \Doctrine\ORM\Query\AST\Functions\LowerFunction::class);
+        $root = new SlugCategory('Alpha');
+        $this->em->persist($root);
+        $this->em->flush();
+
+        $this->expectException(\Ghispi\TreeTransform\Exception\LogicException::class);
+        (new GedmoTree($this->em))->tree(SlugCategory::class, root: $root->id)->count();
+    }
 }

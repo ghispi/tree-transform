@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Tests\Integration;
 
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
-use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\QueryBuilder;
 use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
 use Ghispi\TreeTransform\Bridge\Gedmo\Hydration;
@@ -22,34 +19,34 @@ use PHPUnit\Framework\Attributes\DataProvider;
 final class GedmoPathCollationTest extends GedmoTestCase
 {
     /**
-     * @return iterable<string, array{0: class-string, 1: list<string>}>
+     * @return iterable<string, array{0: string, 1: list<string>}>
      */
     public static function collations(): iterable
     {
-        yield 'sqlite default' => [SQLitePlatform::class, []];
-        yield 'sqlite NOCASE' => [SQLitePlatform::class, [
+        yield 'sqlite default' => ['sqlite', []];
+        yield 'sqlite NOCASE' => ['sqlite', [
             'DROP TABLE SlugCategory',
             'CREATE TABLE SlugCategory (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, title VARCHAR(255) NOT NULL, path VARCHAR(3000) DEFAULT NULL COLLATE NOCASE, level INTEGER DEFAULT NULL, parent_id INTEGER DEFAULT NULL)',
         ]];
-        yield 'mysql default (case-insensitive)' => [AbstractMySQLPlatform::class, []];
-        yield 'mysql latin1' => [AbstractMySQLPlatform::class, ['ALTER TABLE SlugCategory MODIFY path VARCHAR(3000) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL']];
-        yield 'mysql utf8mb4_bin' => [AbstractMySQLPlatform::class, ['ALTER TABLE SlugCategory MODIFY path VARCHAR(3000) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL']];
-        yield 'postgresql default' => [PostgreSQLPlatform::class, []];
-        yield 'postgresql nondeterministic ICU' => [PostgreSQLPlatform::class, [
+        yield 'mysql default (case-insensitive)' => ['mysql', []];
+        yield 'mysql latin1' => ['mysql', ['ALTER TABLE SlugCategory MODIFY path VARCHAR(3000) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL']];
+        yield 'mysql utf8mb4_bin' => ['mysql', ['ALTER TABLE SlugCategory MODIFY path VARCHAR(3000) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL']];
+        yield 'postgresql default' => ['postgresql', []];
+        yield 'postgresql nondeterministic ICU' => ['postgresql', [
             "CREATE COLLATION IF NOT EXISTS tt_ci (provider = icu, locale = 'und-u-ks-level2', deterministic = false)",
             'ALTER TABLE SlugCategory ALTER COLUMN path TYPE VARCHAR(3000) COLLATE tt_ci',
         ]];
     }
 
     /**
-     * @param class-string $platform
+     * @param 'sqlite'|'mysql'|'postgresql' $platform
      * @param list<string> $ddl
      */
     #[DataProvider('collations')]
     public function testTheOtherCaseVariantBranchTakesNoSlotAndIsNotHydrated(string $platform, array $ddl): void
     {
         $connection = $this->em->getConnection();
-        if (!$connection->getDatabasePlatform() instanceof $platform) {
+        if (stripos($connection->getDatabasePlatform()::class, $platform) === false) {
             self::markTestSkipped('Case for another database.');
         }
         foreach ($ddl as $statement) {

@@ -166,7 +166,7 @@ reports an ordering error.
 > branches), whatever the collation of the path column (SQLite `NOCASE`, MySQL's case-insensitive default or a
 > `latin1` column, a PostgreSQL ICU collation). The comparison is part of the query, so the other branch neither
 > takes a slot of a `setMaxResults()` in `$modify` nor reaches the identity map. `GedmoTree` does this with a small
-> DQL function, `TT_BINARY`, which it registers on the entity manager's configuration the first time it needs it.
+> DQL function, `TREE_TRANSFORM_BINARY`, which it registers on the entity manager's configuration the first time it needs it.
 >
 > Two limits. Paths of *sibling* nodes that differ only by case (`r/A/` and `r/a/`) are ordered by the column's
 > collation, which a case-insensitive column cannot do correctly: give such a path column a binary collation. And the
