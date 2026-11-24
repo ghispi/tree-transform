@@ -198,6 +198,7 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
     public function testEntitiesOfAnotherCaseVariantBranchAreNotHydrated(): void
     {
+        $this->skipOnCaseInsensitiveMySql();
         $upper = new SlugCategory('Alpha');
         $lower = new SlugCategory('alpha');
         $this->em->persist($upper);
@@ -214,8 +215,9 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
         self::assertSame(2, $this->em->getUnitOfWork()->size());
     }
 
-    public function testPathScopeProbeToleratesModifierOrderingAliasesAndLimits(): void
+    public function testPathScopeHonoursModifierOrderingAliasesParametersAndLimits(): void
     {
+        $this->skipOnCaseInsensitiveMySql();
         $upper = new SlugCategory('Alpha');
         $lower = new SlugCategory('alpha');
         $this->em->persist($upper);
@@ -231,7 +233,10 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
             SlugCategory::class,
             root: $upper->id,
             hydration: Hydration::Entities,
-            modify: static fn(QueryBuilder $qb, string $a) => $qb->addSelect("LENGTH({$a}.title) AS HIDDEN title_length")->addOrderBy('title_length'),
+            modify: static fn(QueryBuilder $qb, string $a) => $qb
+                ->addSelect("CASE WHEN {$a}.title = :preferred THEN 0 ELSE 1 END AS HIDDEN priority")
+                ->setParameter('preferred', 'wanted')
+                ->addOrderBy('priority'),
         );
         self::assertCount(2, $ordered->toFlatList());
 
@@ -244,5 +249,20 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
         );
         self::assertSame(['Alpha', 'wanted'], array_map(static fn(array $entry): mixed => $entry['node'] instanceof SlugCategory ? $entry['node']->title : null, $limited->toFlatList()));
         self::assertSame(2, $this->em->getUnitOfWork()->size());
+
+        $this->em->clear();
+        $arrays = $gedmo->tree(
+            SlugCategory::class,
+            root: $upper->id,
+            modify: static fn(QueryBuilder $qb, string $a) => $qb->orderBy("{$a}.id")->setMaxResults(2),
+        );
+        self::assertSame('Alpha .wanted', self::outline($arrays->iterate()));
+    }
+
+    private function skipOnCaseInsensitiveMySql(): void
+    {
+        if ($this->em->getConnection()->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\AbstractMySQLPlatform) {
+            self::markTestSkipped('MySQL compares the path column with its (case-insensitive) collation: SQL cannot exclude the other branch.');
+        }
     }
 }

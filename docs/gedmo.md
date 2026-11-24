@@ -127,7 +127,7 @@ $menu = $gedmo->activeTrail(
 | Gedmo type | Query order | Source used | Subtree | Max depth | Active trail |
 |---|---|---|---|---|---|
 | `nested` | `root, lft` | `NestedSetSource` (streams) | `lft`/`rgt` range | level column | only the needed rows (whole tree with `modify`) |
-| `materializedPath` | `path` | `MaterializedPathSource` (streams) | `path LIKE 'prefix%'` plus an exact prefix check in PHP | level column | whole tree, streamed |
+| `materializedPath` | `path` | `MaterializedPathSource` (streams) | `path LIKE 'prefix%'` plus an exact prefix check (SQL and PHP) | level column | whole tree, streamed |
 | `closure` | `id` | `AdjacencyListSource` (reads all rows) | join on the closure table | closure `depth` | whole tree |
 
 Rows are read with `Query::toIterable()`, so with array hydration the library keeps memory proportional to the
@@ -161,5 +161,11 @@ $tree = Tree::fromNestedSet($rows, NestedSetFields::gedmo());
 Array hydration of `SELECT c` leaves associations out, so select the root (and parent, if you need it) with
 `IDENTITY()`. Without a root value, rows of different trees look like one tree numbered twice and the source
 reports an ordering error.
+
+> **Materialized paths and case.** A subtree read compares paths exactly (`Alpha/` and `alpha/` are different
+> branches). On MySQL with a case-insensitive collation SQL cannot tell them apart; the result is still correct
+> (the other branch is dropped in PHP), but with `Hydration::Entities` its entities can be loaded into the identity
+> map and a `setMaxResults()` in `$modify` counts them. Give the path column a binary collation
+> (`utf8mb4_bin`) to avoid that.
 
 A query result can only be read once. Wrap it in `Tree::lazy(fn () => ...)` to run it again for each output.

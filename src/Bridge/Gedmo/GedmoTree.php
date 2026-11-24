@@ -118,11 +118,18 @@ final class GedmoTree
                     if (!$config->pathEndsWithSeparator) {
                         $prefix .= $config->pathSeparator;
                     }
-                    // LIKE is only a coarse, index-friendly filter: SQLite and MySQL (default collations) fold case,
-                    // so it can select rows of a branch whose path differs only by case. The exact, byte-wise prefix
-                    // check happens in PHP, where it does not depend on the database's collation or encoding.
-                    $qb->andWhere(\sprintf("(%1\$s.%2\$s = :tt_exact OR %1\$s.%2\$s LIKE :tt_path ESCAPE '!')", self::ALIAS, $config->path))
+                    // LIKE can use an index but folds case on SQLite and on MySQL's default collations; the SUBSTRING
+                    // comparison (length counted by the database, so it does not depend on PHP's mbstring encoding)
+                    // makes the match exact wherever the column comparison is. A case-insensitive MySQL column cannot
+                    // tell the branches apart in SQL: the PHP check below drops those rows (use a binary collation
+                    // on the path column to keep them out of the identity map and out of a modifier's limit).
+                    $qb->andWhere(\sprintf(
+                        "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, LENGTH(:tt_prefix)) = :tt_prefix))",
+                        self::ALIAS,
+                        $config->path,
+                    ))
                         ->setParameter('tt_exact', $anchor['path'])
+                        ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
                     $pathScope = [$anchor['path'], $prefix];
                 }
@@ -148,15 +155,6 @@ final class GedmoTree
         if ($modified && $config->strategy === TreeStrategy::Closure) {
             $orphans = OrphanPolicy::Drop;
         }
-        if ($pathScope !== null && $hydration === Hydration::Entities) {
-            // Rows outside the exact path scope (case variants) must not be hydrated: they would end up in the
-            // identity map. Their ids are found with a scalar query first (normally none).
-            $outside = $this->outsidePath($config, $qb, $pathScope[0], $pathScope[1]);
-            if ($outside !== []) {
-                $qb->andWhere(\sprintf('%s.%s NOT IN (:tt_outside)', self::ALIAS, $config->id))->setParameter('tt_outside', $outside);
-            }
-        }
-
         $rows = $this->rows($qb, $hydration);
 
         return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modified, $rootParent);
@@ -302,31 +300,6 @@ final class GedmoTree
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
         );
-    }
-
-    /**
-     * Ids of the rows the query selects that are not at $exact or below $prefix (a database that compares paths
-     * case-insensitively returns them). Reads ids and paths only, streaming.
-     *
-     * @return list<mixed>
-     */
-    private function outsidePath(TreeConfig $config, QueryBuilder $qb, string $exact, string $prefix): array
-    {
-        // Ordering (it may use aliases of the replaced select list) and limits are dropped: the probe has to see
-        // every selected row so that the main query's own limit applies after the exclusion.
-        $probe = clone $qb;
-        $probe->resetDQLPart('orderBy')->setFirstResult(null)->setMaxResults(null);
-        $probe->select(\sprintf('%s.%s AS tt_id', self::ALIAS, $config->id))
-            ->addSelect(\sprintf('%s.%s AS tt_path', self::ALIAS, (string) $config->path));
-        $outside = [];
-        foreach ($probe->getQuery()->toIterable([], AbstractQuery::HYDRATE_SCALAR) as $row) {
-            $path = \is_array($row) ? ($row['tt_path'] ?? null) : null;
-            if (\is_string($path) && $path !== $exact && !str_starts_with($path, $prefix)) {
-                $outside[] = $row['tt_id'];
-            }
-        }
-
-        return $outside;
     }
 
     /**

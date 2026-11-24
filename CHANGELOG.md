@@ -11,9 +11,10 @@ All notable changes to this project are documented here. The format follows
   moved them to the end of the row, which changed `json_encode` output and strict array comparisons) (#19).
 - `GedmoTree::tree(root: …)` and `activeTrail()` resolve the subtree's bounds, path and level each time the tree is
   read, so a tree read again after an insert or move describes the rows it reads (#18).
-- The Gedmo materialized-path subtree check no longer depends on the database collation or on mbstring's internal
-  encoding: SQL selects a superset with `LIKE`, and the exact, byte-wise prefix test runs in PHP. This also fixes
-  case variants on MySQL (#17) and non-ASCII paths under a non-UTF-8 `mb_internal_encoding()` (#16).
+- The Gedmo materialized-path subtree check compares paths exactly in SQL (`SUBSTRING` with the length counted by the
+  database) and again in PHP, so it no longer depends on mbstring's internal encoding (#16) and no longer returns case
+  variants on SQLite (#12) or, for array hydration, on MySQL (#17). On a case-insensitive MySQL column the other
+  branch can still be loaded with `Hydration::Entities`; see `docs/gedmo.md`.
 
 ### Fixed
 
