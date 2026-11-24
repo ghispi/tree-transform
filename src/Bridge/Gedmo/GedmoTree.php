@@ -129,11 +129,13 @@ final class GedmoTree
                     $column = \sprintf('%s.%s', self::ALIAS, $config->path);
                     // PostgreSQL rejects LIKE on a nondeterministic collation: compare the operand as binary there.
                     $like = $this->em->getConnection()->getDatabasePlatform() instanceof PostgreSQLPlatform ? "{$b}({$column})" : $column;
-                    $qb->andWhere(\sprintf(
-                        "({$b}(%1\$s) = {$b}(:tt_exact) OR (%2\$s LIKE :tt_path ESCAPE '!' AND {$b}(SUBSTRING(%1\$s, 1, LENGTH(:tt_prefix))) = {$b}(:tt_prefix)))",
-                        $column,
-                        $like,
-                    ))
+                    // Two groups, so the index on the path column stays usable: the plain condition (equal or
+                    // prefix) selects, the binary condition makes it exact.
+                    $qb->andWhere(\sprintf("(%1\$s = :tt_exact OR %2\$s LIKE :tt_path ESCAPE '!')", $column, $like))
+                        ->andWhere(\sprintf(
+                            "({$b}(%1\$s) = {$b}(:tt_exact) OR {$b}(SUBSTRING(%1\$s, 1, LENGTH(:tt_prefix))) = {$b}(:tt_prefix))",
+                            $column,
+                        ))
                         ->setParameter('tt_exact', $anchor['path'])
                         ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');

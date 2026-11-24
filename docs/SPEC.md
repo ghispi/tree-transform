@@ -406,8 +406,10 @@ The facade is sugar only; every piece is usable standalone.
   - Subtree path matching is byte-exact in SQL, before a `$modify` limit and before hydration, whatever the collation
     of the path column, on MySQL/MariaDB, SQLite and PostgreSQL (DQL function `TT_BINARY`: `CAST(CONVERT(x USING
     utf8mb4) AS BINARY)`, `COLLATE BINARY`, `COLLATE "C"`). `LIKE` stays as the index-friendly prefilter; the length of
-    the prefix is counted by the database. On other platforms the output is still exact (a PHP prefix filter), but a
-    limit and the identity map follow the column collation. Tested collations are listed in
+    the prefix is counted by the database. On other platforms a PHP prefix filter removes look-alike rows, but a
+    limit and the identity map follow the column collation. Ordering of *sibling* paths that differ only by case follows
+    the column collation (a binary collation is required for those). `$modify` runs once, at the call, on the base query;
+    the structural conditions are added to a clone per read. Tested collations are listed in
     `tests/Integration/GedmoPathCollationTest.php`.
 - **Closure strategy**: queried via the entity's `parent` + `level` and served through the adjacency or pre-ordered
   adjacency source (closure tables do not give pre-order on their own).

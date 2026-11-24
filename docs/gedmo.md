@@ -167,5 +167,15 @@ reports an ordering error.
 > `latin1` column, a PostgreSQL ICU collation). The comparison is part of the query, so the other branch neither
 > takes a slot of a `setMaxResults()` in `$modify` nor reaches the identity map. `GedmoTree` does this with a small
 > DQL function, `TT_BINARY`, which it registers on the entity manager's configuration the first time it needs it.
+>
+> Two limits. Paths of *sibling* nodes that differ only by case (`r/A/` and `r/a/`) are ordered by the column's
+> collation, which a case-insensitive column cannot do correctly: give such a path column a binary collation. And the
+> exact comparison wraps the column in a function, so only the plain `=`/`LIKE` condition can use an index on the
+> column; on PostgreSQL the `LIKE` operand is compared with `COLLATE "C"`, so add an index on
+> `(CAST(path AS TEXT) COLLATE "C")` for large tables.
 
 A query result can only be read once. Wrap it in `Tree::lazy(fn () => ...)` to run it again for each output.
+
+`$modify` runs once, when `tree()` is called, on the base query (select, order, your changes); the subtree, depth and
+closure conditions are added to a copy of it on every read, so your conditions are always ANDed with them. Parameter
+names starting with `tt_` are reserved.
