@@ -107,4 +107,21 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
             self::assertEquals($nodes['C']->getId(), $e->nodeId());
         }
     }
+
+    public function testMaterializedPathSubtreeIsCaseSensitive(): void
+    {
+        $upper = new PathCategory('Alpha');
+        $lower = new PathCategory('alpha');
+        $this->em->persist($upper);
+        $this->em->persist($lower);
+        $this->em->flush();
+        $this->em->persist(new PathCategory('wanted', true, $upper));
+        $this->em->persist(new PathCategory('unrelated', true, $lower));
+        $this->em->flush();
+        $this->em->clear();
+
+        $tree = (new GedmoTree($this->em))->tree(PathCategory::class, root: $upper->getId());
+
+        self::assertSame('Alpha .wanted', self::outline($tree->iterate()));
+    }
 }

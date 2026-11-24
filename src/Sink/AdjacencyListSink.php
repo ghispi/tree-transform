@@ -72,6 +72,8 @@ final readonly class AdjacencyListSink implements Sink, StreamSink
                 /** @var int|string|null $parent */
                 $out[] = ($this->nodeFactory)($node, $parent, $depth);
             } elseif (\is_array($node)) {
+                // unset() first: a reference held by the input must not be written through.
+                unset($node[$this->parentField]);
                 $node[$this->parentField] = $parent;
                 $out[] = $node;
             } else {

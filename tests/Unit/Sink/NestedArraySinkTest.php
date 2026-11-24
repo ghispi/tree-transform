@@ -122,4 +122,24 @@ final class NestedArraySinkTest extends TestCase
         self::assertSame(9_999, $depth);
         self::assertSame(['id' => 9_999, 'children' => []], $node);
     }
+
+    public function testOmitEmptyChildrenRemovesTheInputChildrenKeyFromLeaves(): void
+    {
+        $rows = [['id' => 1, 'children' => [['id' => 2]]]];
+
+        self::assertSame(
+            [['id' => 1]],
+            Tree::fromNestedArray($rows)->maxDepth(0)->toNestedArray(omitEmptyChildren: true),
+        );
+    }
+
+    public function testInputFieldsHeldByReferenceAreNotOverwritten(): void
+    {
+        $children = [['id' => 2]];
+        $rows = [['id' => 1, 'children' => &$children]];
+
+        Tree::fromNestedArray($rows)->maxDepth(0)->toNestedArray();
+
+        self::assertSame([['id' => 2]], $children);
+    }
 }

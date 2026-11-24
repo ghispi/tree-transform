@@ -96,8 +96,16 @@ final class GedmoTree
                     if (!$config->pathEndsWithSeparator) {
                         $prefix .= $config->pathSeparator;
                     }
-                    $qb->andWhere(\sprintf("(%1\$s.%2\$s = :tt_exact OR %1\$s.%2\$s LIKE :tt_path ESCAPE '!')", self::ALIAS, $config->path))
+                    // LIKE folds ASCII case on SQLite (and on MySQL's default collations), so paths that differ only
+                    // by case would match; the SUBSTRING comparison is exact where the column comparison is.
+                    $qb->andWhere(\sprintf(
+                        "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, %3\$d) = :tt_prefix))",
+                        self::ALIAS,
+                        $config->path,
+                        mb_strlen($prefix),
+                    ))
                         ->setParameter('tt_exact', $anchor['path'])
+                        ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
                 }
                 break;
