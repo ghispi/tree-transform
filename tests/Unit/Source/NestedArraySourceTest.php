@@ -130,4 +130,24 @@ final class NestedArraySourceTest extends TestCase
 
         self::assertSame('a[b, c], d', Trees::compactOf(new NestedArraySource($tree)));
     }
+
+    public function testAGeneratorIsNotAdvancedPastTheNodeBeingConsumed(): void
+    {
+        $roots = (static function (): \Generator {
+            yield ['id' => 1];
+            throw new \RuntimeException('reading the next root failed');
+        })();
+
+        self::assertSame(1, Tree::fromNestedArray($roots)->limit(1)->count());
+    }
+
+    public function testChildGeneratorsAreNotAdvancedEarlyEither(): void
+    {
+        $children = (static function (): \Generator {
+            yield ['id' => 2];
+            throw new \RuntimeException('reading the next child failed');
+        })();
+
+        self::assertSame(2, Tree::fromNestedArray([['id' => 1, 'children' => $children]])->limit(2)->count());
+    }
 }

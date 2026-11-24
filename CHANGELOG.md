@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `toNestedArray(omitEmptyChildren: true)` no longer keeps the input's own children key on a node that became a leaf,
+  so descendants removed by the pipeline no longer reappear (#11).
+- The Gedmo bridge's materialized-path subtree read no longer returns a separate branch whose path differs only by
+  letter case on SQLite (#12). MySQL follows the path column's collation.
+- `NestedArraySource` no longer advances a generator past the node being consumed, so stopping early (e.g.
+  `limit(1)`) does not read the next sibling (#13).
+- The array sinks (`toNestedArray`, `toAdjacencyList`, `toNestedSet`) no longer write through PHP references held by
+  input fields; input arrays stay untouched (#14).
+
 ### Added
 
 - `NestedSetFields` takes an `id` field name (default `'id'`, last parameter). `NestedSetSource` reads it only to

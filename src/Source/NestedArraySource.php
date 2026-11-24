@@ -57,7 +57,7 @@ final readonly class NestedArraySource implements Source, StreamSource
     {
         /** @var array<int, list<mixed>|\Iterator<mixed>> $stack sibling lists (or iterators) being walked, by depth */
         $stack = [$roots];
-        /** @var array<int, int> $positions next position in each list (unused for iterators) */
+        /** @var array<int, int> $positions next position in each list (for iterators: 1 once the current element was handed out, so next() is due) */
         $positions = [0];
         $level = 0;
         while ($level >= 0) {
@@ -71,13 +71,20 @@ final readonly class NestedArraySource implements Source, StreamSource
                 }
                 $node = $top[$position];
                 $positions[$level] = $position + 1;
-            } elseif ($top->valid()) {
-                $node = $top->current();
-                $top->next();
             } else {
-                unset($stack[$level]);
-                --$level;
-                continue;
+                // Advance lazily, on the next visit of this level: a consumer that stops early must not make a
+                // generator produce an element that was never consumed.
+                if ($positions[$level] === 1) {
+                    $top->next();
+                    $positions[$level] = 0;
+                }
+                if (!$top->valid()) {
+                    unset($stack[$level]);
+                    --$level;
+                    continue;
+                }
+                $node = $top->current();
+                $positions[$level] = 1;
             }
 
             if ((yield $level => $node) === true) {

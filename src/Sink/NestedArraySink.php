@@ -95,6 +95,8 @@ final readonly class NestedArraySink implements Sink, StreamSink
             return ($this->nodeFactory)($node, $children, $depth);
         }
         if (\is_array($node)) {
+            // unset() first: a field the input holds by reference would otherwise be written through to the input.
+            unset($node[$this->childrenField]);
             if ($children !== [] || !$this->omitEmptyChildren) {
                 $node[$this->childrenField] = $children;
             }

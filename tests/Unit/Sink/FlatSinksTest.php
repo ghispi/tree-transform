@@ -199,4 +199,24 @@ final class FlatSinksTest extends TestCase
         self::assertSame(4, $tree->into(new CountSink()));
         self::assertSame(0, Tree::fromNestedSet([])->count());
     }
+
+    public function testAdjacencyListLeavesAReferencedParentFieldAlone(): void
+    {
+        $parent = 99;
+
+        Tree::fromDepthList([['id' => 1, 'parent_id' => &$parent]])->toAdjacencyList();
+
+        self::assertSame(99, $parent);
+    }
+
+    public function testNestedSetLeavesReferencedFieldsAlone(): void
+    {
+        $left = 50;
+        $level = 7;
+
+        Tree::fromDepthList([['id' => 1, 'lft' => &$left, 'level' => &$level]])->toNestedSet();
+
+        self::assertSame(50, $left);
+        self::assertSame(7, $level);
+    }
 }
