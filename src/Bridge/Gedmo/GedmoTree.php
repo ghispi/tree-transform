@@ -121,13 +121,18 @@ final class GedmoTree
                     }
                     // LIKE can use an index but folds case on SQLite and on MySQL's default collations; the SUBSTRING
                     // comparison (length counted by the database, so it does not depend on PHP's mbstring encoding)
-                    // makes the match exact wherever the column comparison is. MySQL's case-insensitive collations
-                    // cannot tell the branches apart in SQL: see idsOutsidePath() below.
-                    $qb->andWhere(\sprintf(
-                        "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, LENGTH(:tt_prefix)) = :tt_prefix))",
-                        self::ALIAS,
-                        $config->path,
-                    ))
+                    // makes the match exact. MySQL compares strings with the column collation (case-insensitive by
+                    // default), so there both sides are compared as binary strings.
+                    $sub = \sprintf('SUBSTRING(%1$s.%2$s, 1, LENGTH(:tt_prefix))', self::ALIAS, $config->path);
+                    $column = \sprintf('%s.%s', self::ALIAS, $config->path);
+                    if ($this->binaryComparison()) {
+                        $column = BinaryFunction::NAME . "({$column}) = " . BinaryFunction::NAME . '(:tt_exact)';
+                        $sub = BinaryFunction::NAME . "({$sub}) = " . BinaryFunction::NAME . '(:tt_prefix)';
+                    } else {
+                        $column .= ' = :tt_exact';
+                        $sub .= ' = :tt_prefix';
+                    }
+                    $qb->andWhere(\sprintf("(%s OR (%s.%s LIKE :tt_path ESCAPE '!' AND %s))", $column, self::ALIAS, $config->path, $sub))
                         ->setParameter('tt_exact', $anchor['path'])
                         ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
@@ -155,16 +160,6 @@ final class GedmoTree
         if ($modified && $config->strategy === TreeStrategy::Closure) {
             $orphans = OrphanPolicy::Drop;
         }
-        if ($pathScope !== null && $this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
-            // MySQL compares strings with the column collation (case-insensitive by default), so SQL cannot exclude
-            // a branch whose path differs only by case. Their ids are found with an independent query and excluded
-            // in the main one, before its limit applies and before Doctrine hydrates them (normally none).
-            $outside = $this->idsOutsidePath($config, $pathScope[0], $pathScope[1]);
-            if ($outside !== []) {
-                $qb->andWhere(\sprintf('%s.%s NOT IN (:tt_outside)', self::ALIAS, $config->id))->setParameter('tt_outside', $outside);
-            }
-        }
-
         $rows = $this->rows($qb, $hydration);
 
         return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modified, $rootParent);
@@ -313,29 +308,20 @@ final class GedmoTree
     }
 
     /**
-     * Ids of the rows the superset condition (path equal or LIKE prefix) selects that are not at $exact or below
-     * $prefix, compared byte by byte. A separate query: it shares nothing with the tree query or its modifier.
-     *
-     * @return list<mixed>
+     * On MySQL, string comparison follows the column collation; TT_BINARY makes it byte-exact. The function is
+     * registered on the entity manager's DQL configuration the first time it is needed.
      */
-    private function idsOutsidePath(TreeConfig $config, string $exact, string $prefix): array
+    private function binaryComparison(): bool
     {
-        $path = (string) $config->path;
-        $probe = $this->em->createQueryBuilder()
-            ->select(\sprintf('tt_p.%s AS tt_id', $config->id), \sprintf('tt_p.%s AS tt_path', $path))
-            ->from($config->class, 'tt_p')
-            ->where(\sprintf("(tt_p.%1\$s = :tt_exact OR tt_p.%1\$s LIKE :tt_like ESCAPE '!')", $path))
-            ->setParameter('tt_exact', $exact)
-            ->setParameter('tt_like', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
-        $outside = [];
-        foreach ($probe->getQuery()->toIterable([], AbstractQuery::HYDRATE_SCALAR) as $row) {
-            $found = \is_array($row) ? ($row['tt_path'] ?? null) : null;
-            if (\is_string($found) && $found !== $exact && !str_starts_with($found, $prefix)) {
-                $outside[] = $row['tt_id'];
-            }
+        if (!$this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            return false;
+        }
+        $configuration = $this->em->getConfiguration();
+        if ($configuration->getCustomStringFunction(BinaryFunction::NAME) === null) {
+            $configuration->addCustomStringFunction(BinaryFunction::NAME, BinaryFunction::class);
         }
 
-        return $outside;
+        return true;
     }
 
     /**

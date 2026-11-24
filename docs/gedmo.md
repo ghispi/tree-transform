@@ -163,7 +163,8 @@ Array hydration of `SELECT c` leaves associations out, so select the root (and p
 reports an ordering error.
 
 > **Materialized paths and case.** A subtree read compares paths exactly (`Alpha/` and `alpha/` are different
-> branches), whatever the database collation. On MySQL with a case-insensitive collation `GedmoTree` first finds the
-> ids of such look-alike rows with a small separate query and excludes them from the tree query.
+> branches), whatever the database collation. On MySQL the comparison is made on binary strings
+> (`CAST(… AS BINARY)`, through a small DQL function `GedmoTree` registers on the entity manager's configuration the
+> first time it needs it).
 
 A query result can only be read once. Wrap it in `Tree::lazy(fn () => ...)` to run it again for each output.
