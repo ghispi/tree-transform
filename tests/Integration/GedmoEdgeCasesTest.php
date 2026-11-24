@@ -213,4 +213,36 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
         self::assertCount(2, $tree->toFlatList());
         self::assertSame(2, $this->em->getUnitOfWork()->size());
     }
+
+    public function testPathScopeProbeToleratesModifierOrderingAliasesAndLimits(): void
+    {
+        $upper = new SlugCategory('Alpha');
+        $lower = new SlugCategory('alpha');
+        $this->em->persist($upper);
+        $this->em->persist($lower);
+        $this->em->flush();
+        $this->em->persist(new SlugCategory('unrelated', $lower));
+        $this->em->persist(new SlugCategory('wanted', $upper));
+        $this->em->flush();
+        $this->em->clear();
+        $gedmo = new GedmoTree($this->em);
+
+        $ordered = $gedmo->tree(
+            SlugCategory::class,
+            root: $upper->id,
+            hydration: Hydration::Entities,
+            modify: static fn(QueryBuilder $qb, string $a) => $qb->addSelect("LENGTH({$a}.title) AS HIDDEN title_length")->addOrderBy('title_length'),
+        );
+        self::assertCount(2, $ordered->toFlatList());
+
+        $this->em->clear();
+        $limited = $gedmo->tree(
+            SlugCategory::class,
+            root: $upper->id,
+            hydration: Hydration::Entities,
+            modify: static fn(QueryBuilder $qb, string $a) => $qb->orderBy("{$a}.id")->setMaxResults(2),
+        );
+        self::assertSame(['Alpha', 'wanted'], array_map(static fn(array $entry): mixed => $entry['node'] instanceof SlugCategory ? $entry['node']->title : null, $limited->toFlatList()));
+        self::assertSame(2, $this->em->getUnitOfWork()->size());
+    }
 }

@@ -312,7 +312,10 @@ final class GedmoTree
      */
     private function outsidePath(TreeConfig $config, QueryBuilder $qb, string $exact, string $prefix): array
     {
+        // Ordering (it may use aliases of the replaced select list) and limits are dropped: the probe has to see
+        // every selected row so that the main query's own limit applies after the exclusion.
         $probe = clone $qb;
+        $probe->resetDQLPart('orderBy')->setFirstResult(null)->setMaxResults(null);
         $probe->select(\sprintf('%s.%s AS tt_id', self::ALIAS, $config->id))
             ->addSelect(\sprintf('%s.%s AS tt_path', self::ALIAS, (string) $config->path));
         $outside = [];
