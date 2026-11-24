@@ -79,17 +79,22 @@ final class GedmoTree
             $this->anchor($config, $root);
         }
 
-        // The subtree's structural values (bounds, path, level) are resolved each time the source opens, so a tree
-        // that is read again after a write describes the rows it reads.
-        $source = new LazySource(fn(): Source => $this->treeSource($config, $root, $maxDepth, $hydration, $modify));
+        // $modify runs once, here (it may capture state by reference); the subtree's structural values (bounds, path,
+        // level) are resolved each time the source opens, so a tree that is read again after a write describes the
+        // rows it reads.
+        $base = $this->select($config);
+        if ($modify !== null) {
+            $modify($base, self::ALIAS);
+        }
+        $source = new LazySource(fn(): Source => $this->treeSource($config, $base, $root, $maxDepth, $hydration, $modify !== null));
         $tree = Tree::from($source)->map(self::unwrap($config, $hydration));
 
         return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
     }
 
-    private function treeSource(TreeConfig $config, object|int|string|null $root, ?int $maxDepth, Hydration $hydration, ?\Closure $modify): Source
+    private function treeSource(TreeConfig $config, QueryBuilder $base, object|int|string|null $root, ?int $maxDepth, Hydration $hydration, bool $modified): Source
     {
-        $qb = $this->select($config);
+        $qb = clone $base;
         $anchor = $root === null ? null : $this->anchor($config, $root);
 
         $orphans = OrphanPolicy::Throw;
@@ -136,20 +141,25 @@ final class GedmoTree
                 break;
         }
         // With $modify, removed rows shift depths, so depth is only applied in PHP to keep one meaning of maxDepth.
-        if ($maxDepth !== null && $modify === null && $config->level !== null && $config->strategy !== TreeStrategy::Closure) {
+        if ($maxDepth !== null && !$modified && $config->level !== null && $config->strategy !== TreeStrategy::Closure) {
             $qb->andWhere(\sprintf('%s.%s <= :tt_level', self::ALIAS, $config->level))
                 ->setParameter('tt_level', ($anchor['level'] ?? $this->minLevel($config)) + $maxDepth);
         }
-        if ($modify !== null) {
-            $modify($qb, self::ALIAS);
-            if ($config->strategy === TreeStrategy::Closure) {
-                $orphans = OrphanPolicy::Drop;
+        if ($modified && $config->strategy === TreeStrategy::Closure) {
+            $orphans = OrphanPolicy::Drop;
+        }
+        if ($pathScope !== null && $hydration === Hydration::Entities) {
+            // Rows outside the exact path scope (case variants) must not be hydrated: they would end up in the
+            // identity map. Their ids are found with a scalar query first (normally none).
+            $outside = $this->outsidePath($config, $qb, $pathScope[0], $pathScope[1]);
+            if ($outside !== []) {
+                $qb->andWhere(\sprintf('%s.%s NOT IN (:tt_outside)', self::ALIAS, $config->id))->setParameter('tt_outside', $outside);
             }
         }
 
         $rows = $this->rows($qb, $hydration);
 
-        return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modify !== null, $rootParent);
+        return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modified, $rootParent);
     }
 
     /**
@@ -292,6 +302,28 @@ final class GedmoTree
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
         );
+    }
+
+    /**
+     * Ids of the rows the query selects that are not at $exact or below $prefix (a database that compares paths
+     * case-insensitively returns them). Reads ids and paths only, streaming.
+     *
+     * @return list<mixed>
+     */
+    private function outsidePath(TreeConfig $config, QueryBuilder $qb, string $exact, string $prefix): array
+    {
+        $probe = clone $qb;
+        $probe->select(\sprintf('%s.%s AS tt_id', self::ALIAS, $config->id))
+            ->addSelect(\sprintf('%s.%s AS tt_path', self::ALIAS, (string) $config->path));
+        $outside = [];
+        foreach ($probe->getQuery()->toIterable([], AbstractQuery::HYDRATE_SCALAR) as $row) {
+            $path = \is_array($row) ? ($row['tt_path'] ?? null) : null;
+            if (\is_string($path) && $path !== $exact && !str_starts_with($path, $prefix)) {
+                $outside[] = $row['tt_id'];
+            }
+        }
+
+        return $outside;
     }
 
     /**

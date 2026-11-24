@@ -6,6 +6,7 @@ namespace Ghispi\TreeTransform\Tests\Integration;
 
 use Doctrine\ORM\QueryBuilder;
 use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
+use Ghispi\TreeTransform\Bridge\Gedmo\Hydration;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Tests\Integration\Entity\ClosureCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpNoSep;
@@ -175,5 +176,41 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
         $this->em->flush();
 
         self::assertSame(2, $menu->count());
+    }
+
+    public function testModifyRunsOnceNotOnEveryRead(): void
+    {
+        $this->persistExample(static fn(string $t, bool $v, ?TestNode $p): TestNode => new NestedCategory($t, $v, $p instanceof NestedCategory ? $p : null));
+        $title = 'A';
+        $tree = (new GedmoTree($this->em))->tree(
+            NestedCategory::class,
+            modify: static function (QueryBuilder $qb, string $a) use (&$title): void {
+                $qb->andWhere("{$a}.title = :t")->setParameter('t', $title);
+            },
+        );
+        $first = $tree->count();
+        self::assertGreaterThan(0, $first);
+
+        $title = 'nothing';
+
+        self::assertSame($first, $tree->count());
+    }
+
+    public function testEntitiesOfAnotherCaseVariantBranchAreNotHydrated(): void
+    {
+        $upper = new SlugCategory('Alpha');
+        $lower = new SlugCategory('alpha');
+        $this->em->persist($upper);
+        $this->em->persist($lower);
+        $this->em->flush();
+        $this->em->persist(new SlugCategory('wanted', $upper));
+        $this->em->persist(new SlugCategory('unrelated', $lower));
+        $this->em->flush();
+        $this->em->clear();
+
+        $tree = (new GedmoTree($this->em))->tree(SlugCategory::class, root: $upper->id, hydration: Hydration::Entities);
+
+        self::assertCount(2, $tree->toFlatList());
+        self::assertSame(2, $this->em->getUnitOfWork()->size());
     }
 }
