@@ -9,6 +9,7 @@ use Ghispi\TreeTransform\Bridge\Gedmo\GedmoTree;
 use Ghispi\TreeTransform\Bridge\Gedmo\Hydration;
 use Ghispi\TreeTransform\Exception\InvalidTreeException;
 use Ghispi\TreeTransform\Tests\Integration\Entity\ClosureCategory;
+use Ghispi\TreeTransform\Tests\Integration\Entity\LatinCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpNoSep;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpRoot;
 use Ghispi\TreeTransform\Tests\Integration\Entity\NestedCategory;
@@ -255,5 +256,19 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
             modify: static fn(QueryBuilder $qb, string $a) => $qb->orderBy("{$a}.id")->setMaxResults(2),
         );
         self::assertSame('Alpha .wanted', self::outline($arrays->iterate()));
+    }
+
+    public function testMaterializedPathSubtreeOnAColumnWithAnotherCharacterSetThanTheConnection(): void
+    {
+        $root = new LatinCategory('Café');
+        $this->em->persist($root);
+        $this->em->flush();
+        $this->em->persist(new LatinCategory('wanted', $root));
+        $this->em->flush();
+        $this->em->clear();
+
+        $tree = (new GedmoTree($this->em))->tree(LatinCategory::class, root: $root->id);
+
+        self::assertSame('Café .wanted', self::outline($tree->iterate()));
     }
 }

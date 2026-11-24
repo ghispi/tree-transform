@@ -11,8 +11,8 @@ use Doctrine\ORM\Query\SqlWalker;
 use Doctrine\ORM\Query\TokenType;
 
 /**
- * DQL function TT_BINARY(x): MySQL's CAST(x AS BINARY), which makes a comparison byte-exact whatever the collation of
- * the column. GedmoTree registers it on MySQL platforms only, for the materialized-path subtree check.
+ * DQL function TT_BINARY(x): MySQL's CAST(CONVERT(x USING utf8mb4) AS BINARY): a comparison that is byte-exact whatever the
+ * collation and character set of the column. GedmoTree registers it on MySQL platforms only, for the materialized-path subtree check.
  *
  * @internal
  */
@@ -32,6 +32,7 @@ final class BinaryFunction extends FunctionNode
 
     public function getSql(SqlWalker $sqlWalker): string
     {
-        return \sprintf('CAST(%s AS BINARY)', $sqlWalker->walkSimpleArithmeticExpression($this->operand));
+        // CONVERT first: bytes only compare equal in one character set (a latin1 column against a utf8mb4 connection).
+        return \sprintf('CAST(CONVERT(%s USING utf8mb4) AS BINARY)', $sqlWalker->walkSimpleArithmeticExpression($this->operand));
     }
 }
