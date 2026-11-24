@@ -127,7 +127,7 @@ $menu = $gedmo->activeTrail(
 | Gedmo type | Query order | Source used | Subtree | Max depth | Active trail |
 |---|---|---|---|---|---|
 | `nested` | `root, lft` | `NestedSetSource` (streams) | `lft`/`rgt` range | level column | only the needed rows (whole tree with `modify`) |
-| `materializedPath` | `path` | `MaterializedPathSource` (streams) | `path LIKE 'prefix%'` | level column | whole tree, streamed |
+| `materializedPath` | `path` | `MaterializedPathSource` (streams) | `path LIKE 'prefix%'` plus an exact prefix check in PHP | level column | whole tree, streamed |
 | `closure` | `id` | `AdjacencyListSource` (reads all rows) | join on the closure table | closure `depth` | whole tree |
 
 Rows are read with `Query::toIterable()`, so with array hydration the library keeps memory proportional to the

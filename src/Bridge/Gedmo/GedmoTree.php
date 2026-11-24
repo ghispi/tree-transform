@@ -74,11 +74,28 @@ final class GedmoTree
             throw new InvalidArgumentException('Maximum depth cannot be negative.');
         }
         $config = $this->config($class);
+        if ($root !== null) {
+            // Fails at the call, not at the first read, for an unknown root.
+            $this->anchor($config, $root);
+        }
+
+        // The subtree's structural values (bounds, path, level) are resolved each time the source opens, so a tree
+        // that is read again after a write describes the rows it reads.
+        $source = new LazySource(fn(): Source => $this->treeSource($config, $root, $maxDepth, $hydration, $modify));
+        $tree = Tree::from($source)->map(self::unwrap($config, $hydration));
+
+        return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
+    }
+
+    private function treeSource(TreeConfig $config, object|int|string|null $root, ?int $maxDepth, Hydration $hydration, ?\Closure $modify): Source
+    {
         $qb = $this->select($config);
         $anchor = $root === null ? null : $this->anchor($config, $root);
 
         $orphans = OrphanPolicy::Throw;
         $rootParent = null;
+        /** @var array{string, string}|null $pathScope exact path and descendant prefix of a materialized path subtree */
+        $pathScope = null;
         switch ($config->strategy) {
             case TreeStrategy::Nested:
                 if ($anchor !== null) {
@@ -96,17 +113,13 @@ final class GedmoTree
                     if (!$config->pathEndsWithSeparator) {
                         $prefix .= $config->pathSeparator;
                     }
-                    // LIKE folds ASCII case on SQLite (and on MySQL's default collations), so paths that differ only
-                    // by case would match; the SUBSTRING comparison is exact where the column comparison is.
-                    $qb->andWhere(\sprintf(
-                        "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, %3\$d) = :tt_prefix))",
-                        self::ALIAS,
-                        $config->path,
-                        mb_strlen($prefix),
-                    ))
+                    // LIKE is only a coarse, index-friendly filter: SQLite and MySQL (default collations) fold case,
+                    // so it can select rows of a branch whose path differs only by case. The exact, byte-wise prefix
+                    // check happens in PHP, where it does not depend on the database's collation or encoding.
+                    $qb->andWhere(\sprintf("(%1\$s.%2\$s = :tt_exact OR %1\$s.%2\$s LIKE :tt_path ESCAPE '!')", self::ALIAS, $config->path))
                         ->setParameter('tt_exact', $anchor['path'])
-                        ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
+                    $pathScope = [$anchor['path'], $prefix];
                 }
                 break;
             case TreeStrategy::Closure:
@@ -134,9 +147,9 @@ final class GedmoTree
             }
         }
 
-        $tree = Tree::from($this->source($config, $qb, $hydration, $orphans, $modify !== null, $rootParent))->map(self::unwrap($config, $hydration));
+        $rows = $this->rows($qb, $hydration);
 
-        return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
+        return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modify !== null, $rootParent);
     }
 
     /**
@@ -171,6 +184,14 @@ final class GedmoTree
                 ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
         }
 
+        return Tree::from(new LazySource(fn(): Source => $this->activeTrailSource($config, $active, $siblings, $activeChildrenDepth, $hydration)))
+            ->map(self::unwrap($config, $hydration))
+            ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
+    }
+
+    private function activeTrailSource(TreeConfig $config, object|int|string $active, bool $siblings, int $activeChildrenDepth, Hydration $hydration): Source
+    {
+        $anchor = $this->anchor($config, $active);
         $a = self::ALIAS;
         $qb = $this->select($config);
         $ancestorsOrSelf = \sprintf('%1$s.%2$s <= :tt_l AND %1$s.%3$s >= :tt_r', '%1$s', $config->left, $config->right);
@@ -207,9 +228,7 @@ final class GedmoTree
             $qb->setParameter('tt_root', $anchor['root']);
         }
 
-        return Tree::from($this->source($config, $qb, $hydration, OrphanPolicy::Throw))
-            ->map(self::unwrap($config, $hydration))
-            ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
+        return $this->sourceFor($config, $this->rows($qb, $hydration), OrphanPolicy::Throw, false, null);
     }
 
     /**
@@ -265,16 +284,31 @@ final class GedmoTree
     }
 
     /**
-     * The query runs each time the tree is read, so one Tree can produce several outputs.
+     * @return iterable<mixed>
      */
-    private function source(TreeConfig $config, QueryBuilder $qb, Hydration $hydration, OrphanPolicy $orphans, bool $allowGaps = false, int|string|null $rootParent = null): Source
+    private function rows(QueryBuilder $qb, Hydration $hydration): iterable
     {
-        $query = $qb->getQuery();
-
-        return new LazySource(fn(): Source => $this->sourceFor($config, $query->toIterable(
+        return $qb->getQuery()->toIterable(
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
-        ), $orphans, $allowGaps, $rootParent));
+        );
+    }
+
+    /**
+     * Keeps the rows at $exact or below $prefix, comparing the paths byte by byte.
+     *
+     * @param iterable<mixed> $rows
+     *
+     * @return \Generator<int, mixed>
+     */
+    private static function withinPath(iterable $rows, string $exact, string $prefix): \Generator
+    {
+        foreach ($rows as $row) {
+            $path = \is_array($row) ? ($row['tt_path'] ?? null) : null;
+            if (!\is_string($path) || $path === $exact || str_starts_with($path, $prefix)) {
+                yield $row;
+            }
+        }
     }
 
     /**

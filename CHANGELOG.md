@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The array sinks keep the position of keys the input row already has when they write their values (the fix for #14
+  moved them to the end of the row, which changed `json_encode` output and strict array comparisons) (#19).
+- `GedmoTree::tree(root: …)` and `activeTrail()` resolve the subtree's bounds, path and level each time the tree is
+  read, so a tree read again after an insert or move describes the rows it reads (#18).
+- The Gedmo materialized-path subtree check no longer depends on the database collation or on mbstring's internal
+  encoding: SQL selects a superset with `LIKE`, and the exact, byte-wise prefix test runs in PHP. This also fixes
+  case variants on MySQL (#17) and non-ASCII paths under a non-UTF-8 `mb_internal_encoding()` (#16).
+
+### Fixed
+
 - `toNestedArray(omitEmptyChildren: true)` no longer keeps the input's own children key on a node that became a leaf,
   so descendants removed by the pipeline no longer reappear (#11).
 - The Gedmo bridge's materialized-path subtree read no longer returns a separate branch whose path differs only by

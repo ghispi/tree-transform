@@ -219,4 +219,16 @@ final class FlatSinksTest extends TestCase
         self::assertSame(50, $left);
         self::assertSame(7, $level);
     }
+
+    public function testExistingFieldsKeepTheirPosition(): void
+    {
+        self::assertSame(
+            '[{"id":1,"parent_id":null,"label":"A"}]',
+            json_encode(Tree::fromDepthList([['id' => 1, 'parent_id' => 5, 'label' => 'A']])->toAdjacencyList()),
+        );
+        self::assertSame(
+            '[{"id":1,"lft":1,"label":"A","rgt":2,"lvl":0}]',
+            json_encode(Tree::fromDepthList([['id' => 1, 'lft' => 9, 'label' => 'A', 'rgt' => 9]])->toNestedSet()),
+        );
+    }
 }

@@ -12,6 +12,7 @@ use Ghispi\TreeTransform\Tests\Integration\Entity\MpNoSep;
 use Ghispi\TreeTransform\Tests\Integration\Entity\MpRoot;
 use Ghispi\TreeTransform\Tests\Integration\Entity\NestedCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\PathCategory;
+use Ghispi\TreeTransform\Tests\Integration\Entity\SlugCategory;
 use Ghispi\TreeTransform\Tests\Integration\Entity\TestNode;
 
 /**
@@ -110,18 +111,69 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
     public function testMaterializedPathSubtreeIsCaseSensitive(): void
     {
-        $upper = new PathCategory('Alpha');
-        $lower = new PathCategory('alpha');
+        $upper = new SlugCategory('Alpha');
+        $lower = new SlugCategory('alpha');
         $this->em->persist($upper);
         $this->em->persist($lower);
         $this->em->flush();
-        $this->em->persist(new PathCategory('wanted', true, $upper));
-        $this->em->persist(new PathCategory('unrelated', true, $lower));
+        $this->em->persist(new SlugCategory('wanted', $upper));
+        $this->em->persist(new SlugCategory('unrelated', $lower));
         $this->em->flush();
         $this->em->clear();
 
-        $tree = (new GedmoTree($this->em))->tree(PathCategory::class, root: $upper->getId());
+        $tree = (new GedmoTree($this->em))->tree(SlugCategory::class, root: $upper->id);
 
         self::assertSame('Alpha .wanted', self::outline($tree->iterate()));
+    }
+
+    public function testMaterializedPathSubtreeDoesNotDependOnTheMbstringEncoding(): void
+    {
+        $root = new SlugCategory('Żółć');
+        $this->em->persist($root);
+        $this->em->flush();
+        $this->em->persist(new SlugCategory('wanted', $root));
+        $this->em->flush();
+        $this->em->clear();
+
+        $previous = mb_internal_encoding();
+        mb_internal_encoding('ISO-8859-1');
+        try {
+            $tree = (new GedmoTree($this->em))->tree(SlugCategory::class, root: $root->id);
+
+            self::assertSame('Żółć .wanted', self::outline($tree->iterate()));
+        } finally {
+            mb_internal_encoding($previous);
+        }
+    }
+
+    public function testNestedSetSubtreeFollowsWritesBetweenReads(): void
+    {
+        $root = new NestedCategory('A');
+        $this->em->persist($root);
+        $this->em->flush();
+        $gedmo = new GedmoTree($this->em);
+        $tree = $gedmo->tree(NestedCategory::class, root: $root->getId());
+        self::assertSame(1, $tree->count());
+
+        $this->em->persist(new NestedCategory('B', true, $root));
+        $this->em->flush();
+
+        self::assertSame(2, $tree->count());
+        self::assertSame(2, $gedmo->tree(NestedCategory::class, root: $root->getId())->count());
+    }
+
+    public function testActiveTrailFollowsWritesBetweenReads(): void
+    {
+        $root = new NestedCategory('A');
+        $this->em->persist($root);
+        $this->em->flush();
+        $gedmo = new GedmoTree($this->em);
+        $menu = $gedmo->activeTrail(NestedCategory::class, $root);
+        self::assertSame(1, $menu->count());
+
+        $this->em->persist(new NestedCategory('B', true, $root));
+        $this->em->flush();
+
+        self::assertSame(2, $menu->count());
     }
 }

@@ -163,18 +163,16 @@ final readonly class NestedSetSink implements Sink, StreamSink
                 get_debug_type($node),
             ));
         }
-        // unset() first: a field the input holds by reference would otherwise be written through to the input.
-        unset($node[$this->leftField], $node[$this->rightField]);
-        $node[$this->leftField] = $left;
-        $node[$this->rightField] = $right;
+        // array_replace() keeps the position of keys already in the row and detaches fields the input holds by
+        // reference; assigning would write through to the input.
+        $values = [$this->leftField => $left, $this->rightField => $right];
         if ($this->levelField !== null) {
-            unset($node[$this->levelField]);
-            $node[$this->levelField] = $depth + $this->levelBase;
+            $values[$this->levelField] = $depth + $this->levelBase;
         }
         if ($this->rootField !== null) {
-            unset($node[$this->rootField]);
-            $node[$this->rootField] = $rootId;
+            $values[$this->rootField] = $rootId;
         }
+        $node = array_replace($node, $values);
 
         return $node;
     }
