@@ -49,11 +49,17 @@ final class BinaryFunction extends FunctionNode
     }
 
     /**
-     * By class name: DBAL 3 calls the class SqlitePlatform, DBAL 4 SQLitePlatform, and PSR-4 autoloading is
-     * case-sensitive.
+     * Whether the platform is, or extends, Doctrine's SQLite platform. By class name along the inheritance chain:
+     * DBAL 3 calls the class SqlitePlatform, DBAL 4 SQLitePlatform, and PSR-4 autoloading is case-sensitive.
      */
     private static function isSqlite(object $platform): bool
     {
-        return preg_match('/\\\\sqliteplatform$/i', '\\\\' . $platform::class) === 1;
+        for ($class = $platform::class; $class !== false; $class = get_parent_class($class)) {
+            if (strcasecmp(substr($class, (int) strrpos('\\' . $class, '\\')), 'SqlitePlatform') === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
