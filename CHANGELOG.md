@@ -11,11 +11,13 @@ All notable changes to this project are documented here. The format follows
   moved them to the end of the row, which changed `json_encode` output and strict array comparisons) (#19).
 - `GedmoTree::tree(root: …)` and `activeTrail()` resolve the subtree's bounds, path and level each time the tree is
   read, so a tree read again after an insert or move describes the rows it reads (#18).
-- The Gedmo materialized-path subtree check compares paths exactly in SQL (`SUBSTRING` with the length counted by the
-  database; on MySQL both sides are compared as binary strings), so it no longer depends on mbstring's internal
-  encoding (#16) and no longer returns, hydrates or counts toward a limit the rows of a branch whose path differs only
-  by case (#12, #17). On MySQL `GedmoTree` registers the internal DQL function `TT_BINARY` on the entity manager's
-  configuration when it first needs it.
+- The Gedmo materialized-path subtree check compares paths byte by byte in the query itself (SQL `SUBSTRING` with the
+  length counted by the database, both sides as binary strings), whatever the collation of the path column: the
+  branch of a path that differs only by case no longer appears in the result, takes a slot of a modifier's limit or
+  reaches the identity map (#12, #17), and the check no longer depends on mbstring's internal encoding (#16).
+  `GedmoTree` registers the internal DQL function `TT_BINARY` on the entity manager's configuration when it first
+  needs it; tested on SQLite (default, `NOCASE`), MySQL (default, `latin1`, `utf8mb4_bin`) and PostgreSQL (default,
+  nondeterministic ICU).
 
 ### Fixed
 

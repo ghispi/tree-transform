@@ -162,9 +162,10 @@ Array hydration of `SELECT c` leaves associations out, so select the root (and p
 `IDENTITY()`. Without a root value, rows of different trees look like one tree numbered twice and the source
 reports an ordering error.
 
-> **Materialized paths and case.** A subtree read compares paths exactly (`Alpha/` and `alpha/` are different
-> branches), whatever the database collation. On MySQL the comparison is made on binary strings
-> (`CAST(CONVERT(… USING utf8mb4) AS BINARY)`, through a small DQL function `GedmoTree` registers on the entity manager's configuration the
-> first time it needs it).
+> **Materialized paths and case.** A subtree read compares paths byte by byte (`Alpha/` and `alpha/` are different
+> branches), whatever the collation of the path column (SQLite `NOCASE`, MySQL's case-insensitive default or a
+> `latin1` column, a PostgreSQL ICU collation). The comparison is part of the query, so the other branch neither
+> takes a slot of a `setMaxResults()` in `$modify` nor reaches the identity map. `GedmoTree` does this with a small
+> DQL function, `TT_BINARY`, which it registers on the entity manager's configuration the first time it needs it.
 
 A query result can only be read once. Wrap it in `Tree::lazy(fn () => ...)` to run it again for each output.

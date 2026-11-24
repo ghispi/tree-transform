@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Bridge\Gedmo;
 
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -121,18 +121,19 @@ final class GedmoTree
                     }
                     // LIKE can use an index but folds case on SQLite and on MySQL's default collations; the SUBSTRING
                     // comparison (length counted by the database, so it does not depend on PHP's mbstring encoding)
-                    // makes the match exact. MySQL compares strings with the column collation (case-insensitive by
-                    // default), so there both sides are compared as binary strings.
-                    $sub = \sprintf('SUBSTRING(%1$s.%2$s, 1, LENGTH(:tt_prefix))', self::ALIAS, $config->path);
+                    // makes the match exact. The databases compare strings with the column's collation (SQLite NOCASE,
+                    // MySQL's case-insensitive default, PostgreSQL's ICU), so the comparison is made on binary strings
+                    // (TT_BINARY), in the query itself: before a modifier's limit and before hydration.
+                    $this->registerBinaryFunction();
+                    $b = BinaryFunction::NAME;
                     $column = \sprintf('%s.%s', self::ALIAS, $config->path);
-                    if ($this->binaryComparison()) {
-                        $column = BinaryFunction::NAME . "({$column}) = " . BinaryFunction::NAME . '(:tt_exact)';
-                        $sub = BinaryFunction::NAME . "({$sub}) = " . BinaryFunction::NAME . '(:tt_prefix)';
-                    } else {
-                        $column .= ' = :tt_exact';
-                        $sub .= ' = :tt_prefix';
-                    }
-                    $qb->andWhere(\sprintf("(%s OR (%s.%s LIKE :tt_path ESCAPE '!' AND %s))", $column, self::ALIAS, $config->path, $sub))
+                    // PostgreSQL rejects LIKE on a nondeterministic collation: compare the operand as binary there.
+                    $like = $this->em->getConnection()->getDatabasePlatform() instanceof PostgreSQLPlatform ? "{$b}({$column})" : $column;
+                    $qb->andWhere(\sprintf(
+                        "({$b}(%1\$s) = {$b}(:tt_exact) OR (%2\$s LIKE :tt_path ESCAPE '!' AND {$b}(SUBSTRING(%1\$s, 1, LENGTH(:tt_prefix))) = {$b}(:tt_prefix)))",
+                        $column,
+                        $like,
+                    ))
                         ->setParameter('tt_exact', $anchor['path'])
                         ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
@@ -308,20 +309,14 @@ final class GedmoTree
     }
 
     /**
-     * On MySQL, string comparison follows the column collation; TT_BINARY makes it byte-exact. The function is
-     * registered on the entity manager's DQL configuration the first time it is needed.
+     * Registers the DQL function TT_BINARY on the entity manager's configuration the first time it is needed.
      */
-    private function binaryComparison(): bool
+    private function registerBinaryFunction(): void
     {
-        if (!$this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
-            return false;
-        }
         $configuration = $this->em->getConfiguration();
         if ($configuration->getCustomStringFunction(BinaryFunction::NAME) === null) {
             $configuration->addCustomStringFunction(BinaryFunction::NAME, BinaryFunction::class);
         }
-
-        return true;
     }
 
     /**
