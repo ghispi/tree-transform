@@ -7,10 +7,25 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The array sinks keep the position of keys the input row already has when they write their values (the fix for #14
+  moved them to the end of the row, which changed `json_encode` output and strict array comparisons) (#19).
+- `GedmoTree::tree(root: …)` and `activeTrail()` resolve the subtree's bounds, path and level each time the tree is
+  read, so a tree read again after an insert or move describes the rows it reads (#18).
+- The Gedmo materialized-path subtree check compares paths byte by byte in the query itself (SQL `SUBSTRING` with the
+  length counted by the database, both sides as binary strings), whatever the collation of the path column: the
+  branch of a path that differs only by case no longer appears in the result, takes a slot of a modifier's limit or
+  reaches the identity map (#12, #17), and the check no longer depends on mbstring's internal encoding (#16).
+  `GedmoTree` registers the internal DQL function `TREE_TRANSFORM_BINARY` on the entity manager's configuration when it first
+  needs it; tested on SQLite (default, `NOCASE`), MySQL (default, `latin1`, `utf8mb4_bin`) and PostgreSQL (default,
+  nondeterministic ICU). Sibling paths that differ only by case still need a binary collation on the path column to
+  be ordered correctly (unchanged; see `docs/gedmo.md`).
+- `GedmoTree::tree()` runs the `$modify` closure once, when the tree is created, on the base query; the subtree,
+  depth and closure conditions are added to a copy of it on every read. Consequences: `$modify` state captured by
+  reference is read at the call, a `where()`/`orWhere()` inside `$modify` can no longer replace or widen the subtree
+  condition, and parameters named `tt_*` are reserved. A tree whose root was deleted since the call now fails when it
+  is read.
 - `toNestedArray(omitEmptyChildren: true)` no longer keeps the input's own children key on a node that became a leaf,
   so descendants removed by the pipeline no longer reappear (#11).
-- The Gedmo bridge's materialized-path subtree read no longer returns a separate branch whose path differs only by
-  letter case on SQLite (#12). MySQL follows the path column's collation.
 - `NestedArraySource` no longer advances a generator past the node being consumed, so stopping early (e.g.
   `limit(1)`) does not read the next sibling (#13).
 - The array sinks (`toNestedArray`, `toAdjacencyList`, `toNestedSet`) no longer write through PHP references held by

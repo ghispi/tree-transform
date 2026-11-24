@@ -142,4 +142,12 @@ final class NestedArraySinkTest extends TestCase
 
         self::assertSame([['id' => 2]], $children);
     }
+
+    public function testExistingChildrenKeyKeepsItsPosition(): void
+    {
+        self::assertSame(
+            '[{"id":1,"children":[],"label":"A"}]',
+            json_encode(Tree::fromDepthList([['id' => 1, 'children' => [], 'label' => 'A']])->toNestedArray()),
+        );
+    }
 }

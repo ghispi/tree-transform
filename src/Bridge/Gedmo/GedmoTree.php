@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Bridge\Gedmo;
 
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -74,11 +75,33 @@ final class GedmoTree
             throw new InvalidArgumentException('Maximum depth cannot be negative.');
         }
         $config = $this->config($class);
-        $qb = $this->select($config);
+        if ($root !== null) {
+            // Fails at the call, not at the first read, for an unknown root.
+            $this->anchor($config, $root);
+        }
+
+        // $modify runs once, here (it may capture state by reference); the subtree's structural values (bounds, path,
+        // level) are resolved each time the source opens, so a tree that is read again after a write describes the
+        // rows it reads.
+        $base = $this->select($config);
+        if ($modify !== null) {
+            $modify($base, self::ALIAS);
+        }
+        $source = new LazySource(fn(): Source => $this->treeSource($config, $base, $root, $maxDepth, $hydration, $modify !== null));
+        $tree = Tree::from($source)->map(self::unwrap($config, $hydration));
+
+        return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
+    }
+
+    private function treeSource(TreeConfig $config, QueryBuilder $base, object|int|string|null $root, ?int $maxDepth, Hydration $hydration, bool $modified): Source
+    {
+        $qb = clone $base;
         $anchor = $root === null ? null : $this->anchor($config, $root);
 
         $orphans = OrphanPolicy::Throw;
         $rootParent = null;
+        /** @var array{string, string}|null $pathScope exact path and descendant prefix of a materialized path subtree */
+        $pathScope = null;
         switch ($config->strategy) {
             case TreeStrategy::Nested:
                 if ($anchor !== null) {
@@ -96,17 +119,30 @@ final class GedmoTree
                     if (!$config->pathEndsWithSeparator) {
                         $prefix .= $config->pathSeparator;
                     }
-                    // LIKE folds ASCII case on SQLite (and on MySQL's default collations), so paths that differ only
-                    // by case would match; the SUBSTRING comparison is exact where the column comparison is.
-                    $qb->andWhere(\sprintf(
-                        "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, %3\$d) = :tt_prefix))",
-                        self::ALIAS,
-                        $config->path,
-                        mb_strlen($prefix),
-                    ))
+                    // LIKE can use an index but folds case on SQLite and on MySQL's default collations; the SUBSTRING
+                    // comparison (length counted by the database, so it does not depend on PHP's mbstring encoding)
+                    // makes the match exact. The databases compare strings with the column's collation (SQLite NOCASE,
+                    // MySQL's case-insensitive default, PostgreSQL's ICU), so the comparison is made on binary strings
+                    // (TREE_TRANSFORM_BINARY), in the query itself: before a modifier's limit and before hydration.
+                    $this->registerBinaryFunction();
+                    $b = BinaryFunction::NAME;
+                    $column = \sprintf('%s.%s', self::ALIAS, $config->path);
+                    // PostgreSQL rejects LIKE on a nondeterministic collation, and an expression index serves both arms
+                    // only if both use the same collation: compare the operands as binary there.
+                    $like = $this->em->getConnection()->getDatabasePlatform() instanceof PostgreSQLPlatform ? "{$b}({$column})" : $column;
+                    // Two groups, so the index on the path column stays usable: the plain condition (equal or
+                    // prefix) selects, the binary condition makes it exact.
+                    $postgres = $this->em->getConnection()->getDatabasePlatform() instanceof PostgreSQLPlatform;
+                    $equal = $postgres ? "{$b}({$column}) = {$b}(:tt_exact)" : "{$column} = :tt_exact";
+                    $qb->andWhere(\sprintf("(%s OR %s LIKE :tt_path ESCAPE '!')", $equal, $like))
+                        ->andWhere(\sprintf(
+                            "({$b}(%1\$s) = {$b}(:tt_exact) OR {$b}(SUBSTRING(%1\$s, 1, LENGTH(:tt_prefix))) = {$b}(:tt_prefix))",
+                            $column,
+                        ))
                         ->setParameter('tt_exact', $anchor['path'])
                         ->setParameter('tt_prefix', $prefix)
                         ->setParameter('tt_path', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
+                    $pathScope = [$anchor['path'], $prefix];
                 }
                 break;
             case TreeStrategy::Closure:
@@ -123,20 +159,16 @@ final class GedmoTree
                 break;
         }
         // With $modify, removed rows shift depths, so depth is only applied in PHP to keep one meaning of maxDepth.
-        if ($maxDepth !== null && $modify === null && $config->level !== null && $config->strategy !== TreeStrategy::Closure) {
+        if ($maxDepth !== null && !$modified && $config->level !== null && $config->strategy !== TreeStrategy::Closure) {
             $qb->andWhere(\sprintf('%s.%s <= :tt_level', self::ALIAS, $config->level))
                 ->setParameter('tt_level', ($anchor['level'] ?? $this->minLevel($config)) + $maxDepth);
         }
-        if ($modify !== null) {
-            $modify($qb, self::ALIAS);
-            if ($config->strategy === TreeStrategy::Closure) {
-                $orphans = OrphanPolicy::Drop;
-            }
+        if ($modified && $config->strategy === TreeStrategy::Closure) {
+            $orphans = OrphanPolicy::Drop;
         }
+        $rows = $this->rows($qb, $hydration);
 
-        $tree = Tree::from($this->source($config, $qb, $hydration, $orphans, $modify !== null, $rootParent))->map(self::unwrap($config, $hydration));
-
-        return $maxDepth === null ? $tree : $tree->maxDepth($maxDepth);
+        return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modified, $rootParent);
     }
 
     /**
@@ -171,6 +203,14 @@ final class GedmoTree
                 ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
         }
 
+        return Tree::from(new LazySource(fn(): Source => $this->activeTrailSource($config, $active, $siblings, $activeChildrenDepth, $hydration)))
+            ->map(self::unwrap($config, $hydration))
+            ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
+    }
+
+    private function activeTrailSource(TreeConfig $config, object|int|string $active, bool $siblings, int $activeChildrenDepth, Hydration $hydration): Source
+    {
+        $anchor = $this->anchor($config, $active);
         $a = self::ALIAS;
         $qb = $this->select($config);
         $ancestorsOrSelf = \sprintf('%1$s.%2$s <= :tt_l AND %1$s.%3$s >= :tt_r', '%1$s', $config->left, $config->right);
@@ -207,9 +247,7 @@ final class GedmoTree
             $qb->setParameter('tt_root', $anchor['root']);
         }
 
-        return Tree::from($this->source($config, $qb, $hydration, OrphanPolicy::Throw))
-            ->map(self::unwrap($config, $hydration))
-            ->activeTrail($isActive, $siblings, $activeChildrenDepth, multiple: false);
+        return $this->sourceFor($config, $this->rows($qb, $hydration), OrphanPolicy::Throw, false, null);
     }
 
     /**
@@ -265,16 +303,45 @@ final class GedmoTree
     }
 
     /**
-     * The query runs each time the tree is read, so one Tree can produce several outputs.
+     * @return iterable<mixed>
      */
-    private function source(TreeConfig $config, QueryBuilder $qb, Hydration $hydration, OrphanPolicy $orphans, bool $allowGaps = false, int|string|null $rootParent = null): Source
+    private function rows(QueryBuilder $qb, Hydration $hydration): iterable
     {
-        $query = $qb->getQuery();
-
-        return new LazySource(fn(): Source => $this->sourceFor($config, $query->toIterable(
+        return $qb->getQuery()->toIterable(
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
-        ), $orphans, $allowGaps, $rootParent));
+        );
+    }
+
+    /**
+     * Registers the DQL function TREE_TRANSFORM_BINARY on the entity manager's configuration the first time it is needed.
+     */
+    private function registerBinaryFunction(): void
+    {
+        $configuration = $this->em->getConfiguration();
+        $registered = $configuration->getCustomStringFunction(BinaryFunction::NAME);
+        if ($registered === null) {
+            $configuration->addCustomStringFunction(BinaryFunction::NAME, BinaryFunction::class);
+        } elseif ($registered !== BinaryFunction::class) {
+            throw new LogicException(\sprintf('The DQL function %s is already registered by the application; the bridge needs its own.', BinaryFunction::NAME));
+        }
+    }
+
+    /**
+     * Keeps the rows at $exact or below $prefix, comparing the paths byte by byte.
+     *
+     * @param iterable<mixed> $rows
+     *
+     * @return \Generator<int, mixed>
+     */
+    private static function withinPath(iterable $rows, string $exact, string $prefix): \Generator
+    {
+        foreach ($rows as $row) {
+            $path = \is_array($row) ? ($row['tt_path'] ?? null) : null;
+            if (!\is_string($path) || $path === $exact || str_starts_with($path, $prefix)) {
+                yield $row;
+            }
+        }
     }
 
     /**
