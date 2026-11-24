@@ -198,7 +198,6 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
     public function testEntitiesOfAnotherCaseVariantBranchAreNotHydrated(): void
     {
-        $this->skipOnCaseInsensitiveMySql();
         $upper = new SlugCategory('Alpha');
         $lower = new SlugCategory('alpha');
         $this->em->persist($upper);
@@ -217,7 +216,6 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
 
     public function testPathScopeHonoursModifierOrderingAliasesParametersAndLimits(): void
     {
-        $this->skipOnCaseInsensitiveMySql();
         $upper = new SlugCategory('Alpha');
         $lower = new SlugCategory('alpha');
         $this->em->persist($upper);
@@ -257,12 +255,5 @@ final class GedmoEdgeCasesTest extends GedmoTestCase
             modify: static fn(QueryBuilder $qb, string $a) => $qb->orderBy("{$a}.id")->setMaxResults(2),
         );
         self::assertSame('Alpha .wanted', self::outline($arrays->iterate()));
-    }
-
-    private function skipOnCaseInsensitiveMySql(): void
-    {
-        if ($this->em->getConnection()->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\AbstractMySQLPlatform) {
-            self::markTestSkipped('MySQL compares the path column with its (case-insensitive) collation: SQL cannot exclude the other branch.');
-        }
     }
 }

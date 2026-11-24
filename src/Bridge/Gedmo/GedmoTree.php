@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ghispi\TreeTransform\Bridge\Gedmo;
 
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -120,9 +121,8 @@ final class GedmoTree
                     }
                     // LIKE can use an index but folds case on SQLite and on MySQL's default collations; the SUBSTRING
                     // comparison (length counted by the database, so it does not depend on PHP's mbstring encoding)
-                    // makes the match exact wherever the column comparison is. A case-insensitive MySQL column cannot
-                    // tell the branches apart in SQL: the PHP check below drops those rows (use a binary collation
-                    // on the path column to keep them out of the identity map and out of a modifier's limit).
+                    // makes the match exact wherever the column comparison is. MySQL's case-insensitive collations
+                    // cannot tell the branches apart in SQL: see idsOutsidePath() below.
                     $qb->andWhere(\sprintf(
                         "(%1\$s.%2\$s = :tt_exact OR (%1\$s.%2\$s LIKE :tt_path ESCAPE '!' AND SUBSTRING(%1\$s.%2\$s, 1, LENGTH(:tt_prefix)) = :tt_prefix))",
                         self::ALIAS,
@@ -155,6 +155,16 @@ final class GedmoTree
         if ($modified && $config->strategy === TreeStrategy::Closure) {
             $orphans = OrphanPolicy::Drop;
         }
+        if ($pathScope !== null && $this->em->getConnection()->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
+            // MySQL compares strings with the column collation (case-insensitive by default), so SQL cannot exclude
+            // a branch whose path differs only by case. Their ids are found with an independent query and excluded
+            // in the main one, before its limit applies and before Doctrine hydrates them (normally none).
+            $outside = $this->idsOutsidePath($config, $pathScope[0], $pathScope[1]);
+            if ($outside !== []) {
+                $qb->andWhere(\sprintf('%s.%s NOT IN (:tt_outside)', self::ALIAS, $config->id))->setParameter('tt_outside', $outside);
+            }
+        }
+
         $rows = $this->rows($qb, $hydration);
 
         return $this->sourceFor($config, $pathScope === null ? $rows : self::withinPath($rows, $pathScope[0], $pathScope[1]), $orphans, $modified, $rootParent);
@@ -300,6 +310,32 @@ final class GedmoTree
             [],
             $hydration === Hydration::Arrays ? AbstractQuery::HYDRATE_ARRAY : AbstractQuery::HYDRATE_OBJECT,
         );
+    }
+
+    /**
+     * Ids of the rows the superset condition (path equal or LIKE prefix) selects that are not at $exact or below
+     * $prefix, compared byte by byte. A separate query: it shares nothing with the tree query or its modifier.
+     *
+     * @return list<mixed>
+     */
+    private function idsOutsidePath(TreeConfig $config, string $exact, string $prefix): array
+    {
+        $path = (string) $config->path;
+        $probe = $this->em->createQueryBuilder()
+            ->select(\sprintf('tt_p.%s AS tt_id', $config->id), \sprintf('tt_p.%s AS tt_path', $path))
+            ->from($config->class, 'tt_p')
+            ->where(\sprintf("(tt_p.%1\$s = :tt_exact OR tt_p.%1\$s LIKE :tt_like ESCAPE '!')", $path))
+            ->setParameter('tt_exact', $exact)
+            ->setParameter('tt_like', str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix) . '%');
+        $outside = [];
+        foreach ($probe->getQuery()->toIterable([], AbstractQuery::HYDRATE_SCALAR) as $row) {
+            $found = \is_array($row) ? ($row['tt_path'] ?? null) : null;
+            if (\is_string($found) && $found !== $exact && !str_starts_with($found, $prefix)) {
+                $outside[] = $row['tt_id'];
+            }
+        }
+
+        return $outside;
     }
 
     /**

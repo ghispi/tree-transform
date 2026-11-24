@@ -163,9 +163,7 @@ Array hydration of `SELECT c` leaves associations out, so select the root (and p
 reports an ordering error.
 
 > **Materialized paths and case.** A subtree read compares paths exactly (`Alpha/` and `alpha/` are different
-> branches). On MySQL with a case-insensitive collation SQL cannot tell them apart; the result is still correct
-> (the other branch is dropped in PHP), but with `Hydration::Entities` its entities can be loaded into the identity
-> map and a `setMaxResults()` in `$modify` counts them. Give the path column a binary collation
-> (`utf8mb4_bin`) to avoid that.
+> branches), whatever the database collation. On MySQL with a case-insensitive collation `GedmoTree` first finds the
+> ids of such look-alike rows with a small separate query and excludes them from the tree query.
 
 A query result can only be read once. Wrap it in `Tree::lazy(fn () => ...)` to run it again for each output.
